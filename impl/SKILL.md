@@ -35,6 +35,37 @@ Only spawn after the user says yes in chat.
    result, and go forward only once the user confirms A is correct.
 5. **Keep memory.** Maintain a running record of where we are in the plan, what each
    sub-agent changed, and what remains. Update it after every task.
+6. **Finish the plan.** Every wave, to the end, including the review and show-me pass. Do
+   not stop at the last interesting task and offer the rest as an option. If something is
+   genuinely blocked, complete everything else and say plainly what was left and why.
+
+## Establish the conventions before delegating
+
+The orchestrator owns this step. Do it once, up front, and again whenever the work moves
+into a stack it has not covered yet. A sub-agent inherits the result; it does not go and
+work this out for itself, because three sub-agents working it out independently is three
+different answers.
+
+1. **Read the project first.** An existing layout, `CLAUDE.md`, `AGENTS.md`, a README, a
+   lint or formatter config, an ADR: these win over anything general. Match them even where
+   you would have chosen differently.
+2. **Green field or silent project: go and find the idiomatic layout** for the language,
+   framework or tool in question. Use the documentation tools available, the official style
+   guide, the ecosystem's own scaffolding output. Do not reason it out from memory, and do
+   not assume the shape of the last stack you worked in transfers.
+3. **Write it down** as a short conventions note in the repo, before the first sub-agent is
+   spawned. File layout, naming, where each kind of declaration lives, which tools gate the
+   work.
+4. **Put it in every sub-agent prompt**, concretely. Not "follow best practice" but the
+   actual file names, the actual rule.
+5. **First implementation sets the pattern.** Show it, confirm it is right, then hold every
+   later sub-agent to it. Reviewing the fifth module is too late to discover the layout was
+   wrong.
+
+The failure this prevents: every sub-agent writes correct code in a different shape, the
+result validates and passes tests, and it still does not look like a codebase a team
+maintains. Structure is not something to review at the end. It is context to hand over at
+the start.
 
 ## Sub-agent context
 
@@ -91,6 +122,11 @@ Run these after an implementation lands, before it is called done.
 
 The orchestrator runs the review skills on what comes back from a sub-agent. A sub-agent
 may run them on its own output before returning.
+
+**These are not optional and not a nice-to-have at the end.** Work is not done until the
+review skills have run on it and their findings are either applied or explicitly declined
+with a reason. Run `ponytail-review` per landed task, `ponytail-audit` and `show-me` once
+the whole plan is complete.
 
 ## Structure and architecture
 
