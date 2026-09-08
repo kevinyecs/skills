@@ -128,5 +128,22 @@ Design, draw and build are done. Test, verify, review, deploy, operate and docum
 and each has the same shape of problem: an agent will happily produce something plausible,
 and you need an artifact plus a check that says whether it is right.
 
+### Planned
+
+None of these are designed yet. The list is here so the shape of the toolkit is visible
+before the work starts, and so anything picked up gets held to the same bar as the three
+that exist: an artifact a human can read, and a check instead of a judgement wherever one
+will fit.
+
+| Skill | Does | Status |
+|---|---|---|
+| `lets-understand` | Read an unfamiliar codebase and leave a map behind, so the next session starts informed instead of re reading everything | not started |
+| `lets-gather` | Collect the context that lives outside the repo before work starts, tickets, threads, docs, and write it where the other skills can read it | not started |
+| `lets-review` | Review a change for what it does, not for how it reads. The seat arguing for deletion applies here too | not started |
+| `lets-secure` | Threat model and audit, with every finding tied to a concrete path rather than a feeling | not started |
+| `lets-git` | History, branches, commits and conflicts treated as a deliberate operation rather than a reflex | not started |
+| `lets-deploy` | Ship it, and leave behind a check that says whether it actually landed | not started |
+| `lets-message` | Write one targeted message for a coworker or a customer. Audience, intent, and what they do next, not a wall of text | not started |
+
 Bring one. A skill belongs here if it makes an agent more precise, leaves an artifact a
 human can read, and replaces a judgement with a check where it can.
