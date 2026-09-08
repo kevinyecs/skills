@@ -21,23 +21,21 @@ a design that names every service and decides nothing, a diagram that renders an
 read. More output is not more work done. It is more to review, and review is where the time
 actually goes.
 
-So these skills are built to narrow rather than expand. Fewer components, argued for. Fewer
-lines, each earning its place. Deterministic checks wherever a judgement can be replaced by
-arithmetic, because a check that fails is worth more than a rule that is ignored. Every
-skill here has a seat at the table whose only job is to argue for deletion.
+So these skills are built to narrow rather than expand. Fewer components, fewer lines, each
+argued for. Deterministic checks wherever a judgement can be replaced by arithmetic, because
+a check that fails is worth more than a rule that is ignored. Every skill here has a seat at
+the table whose only job is to argue for deletion.
 
-And they are built so you can keep up. An agent moves faster than you can hold in your
-head, so every tool here writes down what it decided and why, as it goes. The state of the
-work is something you check rather than something you remember. That is the difference
-between output you own and output you merely accepted.
+An agent also moves faster than you can hold in your head, so every tool here writes down
+what it decided and why, as it goes. The state of the work is something you check rather
+than something you remember.
 
 None of this starts from scratch. `lets-design` gets its requirements by chaining to Matt
 Pocock's `grilling`. `lets-code` shows what it built with humanlayer's `show-me` and puts
-every landed task through `ponytail-review`. Those skills already solved the parts they
-solve, and reusing them beats writing a worse second version of each. The same rule applies
-to a skill added here: if something good already exists, pin to it and give it the credit.
-
-Install them alongside this plugin, they are listed under [Dependency skills](#dependency-skills).
+every landed task through `ponytail-review`. Those skills solve their part well, and reusing
+them beats writing a worse second version of each. The same rule applies to a skill added
+here: if something good already exists, pin to it and give it the credit. They are listed
+under [Dependency skills](#dependency-skills), install them alongside this plugin.
 
 Less is more, precise beats plausible, and you should still understand the system after
 the agent is done.
