@@ -12,6 +12,22 @@ gather        argue it out     draw it       build it
 Each stage produces a file the next one reads. You can start at any stage that has its
 input, and stop at any stage whose output is all you wanted.
 
+## Philosophy
+
+Let the agent do precise work.
+
+An agent given a vague brief produces plausible bulk: code that compiles and says nothing,
+a design that names every service and decides nothing, a diagram that renders and cannot be
+read. More output is not more work done. It is more to review, and review is where the time
+actually goes.
+
+So these skills are built to narrow rather than expand. Fewer components, argued for. Fewer
+lines, each earning its place. Deterministic checks wherever a judgement can be replaced by
+arithmetic, because a check that fails is worth more than a rule that is ignored. Every
+skill here has a seat at the table whose only job is to argue for deletion.
+
+Less is more, and precise beats plausible.
+
 ## Install
 
 ```sh
@@ -93,11 +109,16 @@ pass a well formed diagram that draws the wrong system.
 Round trip and PNG verification need the drawio binary, which the plugin does not assume is
 installed. The validator works on the XML alone.
 
-## Other plugins worth having
+## Dependency skills
 
-`lets-design` chains to `mattpocock-skills:grilling` for its context gate. `lets-code`
-references the `show-me` and `ponytail` plugins in its review pass. Install these separately
-if you want the pipeline to work as written.
+These are separate plugins this one leans on. Install them if you want the pipeline to work
+as written.
+
+| Plugin | Repo | Used by |
+|---|---|---|
+| `grilling` and friends | [mattpocock/skills](https://github.com/mattpocock/skills) | `lets-design` chains to `grilling` for its context gate |
+| `show-me` and friends | [humanlayer/skills](https://github.com/humanlayer/skills) | `lets-code` uses `show-me` to show what was built |
+| `ponytail` | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | `lets-code` runs `ponytail-review` on every landed task |
 
 ## Tests
 
@@ -109,4 +130,7 @@ node plugins/lets-skills/draw-io-utils/test-validate-drawio.js
 
 ## License
 
-MIT. Use it, fork it, ship it, sell it. Pull requests welcome.
+MIT. Use it, fork it, ship it, sell it.
+
+Pull requests welcome, especially new skills. A skill belongs here if it makes an agent
+more precise rather than more prolific.
