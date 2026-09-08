@@ -28,34 +28,6 @@ skill here has a seat at the table whose only job is to argue for deletion.
 
 Less is more, and precise beats plausible.
 
-### Keeping the mental model
-
-The bottleneck is not how fast an agent writes. It is whether you still understand the
-system afterwards. An agent can produce a week of work in an afternoon, and if none of it
-is written down anywhere but the diff, you now own a codebase you did not read.
-
-So every stage here leaves an artifact you can read instead of a conversation you have to
-remember. `lets-design` writes the reasoning, not just the component list. `lets-draw`
-writes a diagram that has to survive a validator and a reviewer. `lets-code` keeps a plan
-with a status column, and a Stop hook that will not let the session end while a task is
-unreviewed. Conventions live in a file that gets injected into every sub-agent rather than
-in the head of whoever started the session.
-
-That is what makes the output maintainable. The artifacts are the mental model, kept
-outside your head, updated as the work lands, and readable by the next session or the next
-person.
-
-### Where this is going
-
-The goal is a toolkit that covers the whole lifecycle this way, not one clever prompt.
-Design, draw, build are done. Test, verify, review, deploy, operate and document are not,
-and each one has the same shape of problem: an agent will happily produce something
-plausible, and you need an artifact plus a check that says whether it is right.
-
-The repo is looking for skills that carry this forward. Something that makes an agent more
-precise, leaves an artifact a human can read, and replaces a judgement with a check where
-it can. Bring one.
-
 ## Install
 
 ```sh
@@ -116,27 +88,6 @@ structures.
 | `SubagentStart` | Injects the project conventions into every sub-agent, since session context never reaches them |
 | `PostToolUse` | Runs the drawio validator on any `.drawio` file just written |
 
-## Limits, honestly
-
-A hook cannot spawn an agent or run a skill. The gate cannot review anything itself. All it
-does is refuse to let the orchestrator stop, so the orchestrator has to do the review pass
-and update the plan.
-
-The gate is only as good as the plan file. If the orchestrator does not maintain the status
-column, the gate has nothing to check.
-
-The gate gives up after 3 consecutive blocks in a session and prints a warning to stderr, so
-a wrong status value cannot trap you in a loop.
-
-Both hooks exit silently when the file they look for is absent, so they are a no-op in any
-project that is not using them.
-
-The drawio validator checks structure, not whether the diagram matches the design. It will
-pass a well formed diagram that draws the wrong system.
-
-Round trip and PNG verification need the drawio binary, which the plugin does not assume is
-installed. The validator works on the XML alone.
-
 ## Dependency skills
 
 These are separate plugins this one leans on. Install them if you want the pipeline to work
@@ -148,17 +99,37 @@ as written.
 | `show-me` and friends | [humanlayer/skills](https://github.com/humanlayer/skills) | `lets-code` uses `show-me` to show what was built |
 | `ponytail` | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | `lets-code` runs `ponytail-review` on every landed task |
 
-## Tests
-
-```sh
-node plugins/lets-skills/test-plugin.js
-node plugins/lets-skills/hooks/test-plan-gate.js
-node plugins/lets-skills/draw-io-utils/test-validate-drawio.js
-```
-
 ## License
 
 MIT. Use it, fork it, ship it, sell it.
 
 Pull requests welcome, especially new skills. A skill belongs here if it makes an agent
 more precise rather than more prolific.
+
+## Keeping the mental model
+
+The bottleneck is not how fast an agent writes. It is whether you still understand the
+system afterwards. An agent can produce a week of work in an afternoon, and if none of it
+is written down anywhere but the diff, you now own a codebase you did not read.
+
+So every stage here leaves an artifact you can read instead of a conversation you have to
+remember. `lets-design` writes the reasoning, not just the component list. `lets-draw`
+writes a diagram that has to survive a validator and a reviewer. `lets-code` keeps a plan
+with a status column, and a Stop hook that will not let the session end while a task is
+unreviewed. Conventions live in a file that gets injected into every sub-agent rather than
+in the head of whoever started the session.
+
+That is what makes the output maintainable. The artifacts are the mental model, kept
+outside your head, updated as the work lands, and readable by the next session or the next
+person.
+
+## Where this is going
+
+The goal is a toolkit that covers the whole lifecycle this way, not one clever prompt.
+Design, draw, build are done. Test, verify, review, deploy, operate and document are not,
+and each one has the same shape of problem: an agent will happily produce something
+plausible, and you need an artifact plus a check that says whether it is right.
+
+The repo is looking for skills that carry this forward. Something that makes an agent more
+precise, leaves an artifact a human can read, and replaces a judgement with a check where
+it can. Bring one.
