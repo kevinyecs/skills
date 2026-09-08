@@ -12,6 +12,19 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/drawio-gate.js\"",
+            "timeout": 5,
+            "statusMessage": "Validating diagram..."
+          }
+        ]
+      }
+    ],
     "SubagentStart": [
       {
         "hooks": [
