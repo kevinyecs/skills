@@ -38,7 +38,7 @@ const CHECK = {
   ORPHAN: 'orphan-vertex',
   STYLE_TOKEN: 'style-token',
   SHAPE_NAME: 'shape-name',
-  BACKGROUND: 'background',
+  CANVAS: 'canvas',
   FONT_CONTRAST: 'font-contrast',
   NODE_OVERLAP: 'node-overlap',
   LABEL_COLLISION: 'label-collision',
@@ -61,6 +61,10 @@ const GEOMETRY_ATTRS = ['x', 'y', 'width', 'height'];
 // paints its own dark surface behind it. White is the only value that renders
 // the same everywhere, and it is the surface the contrast check assumes.
 const REQUIRED_BACKGROUND = '#ffffff';
+
+// The editor grid is chrome, not content, and it exports into the PNG. A page
+// meant to be read gets visual noise it never asked for, so the grid is off.
+const REQUIRED_GRID = '0';
 
 // Minimum contrast of label text against the surface it sits on. 3:1 is the
 // WCAG 2.1 large-text / non-text minimum. It is the right cut here rather than
@@ -569,7 +573,7 @@ function checkPage(diagram, pageLabel, add, catalog) {
     }
     return;
   }
-  checkBackground(model, pageLabel, add);
+  checkCanvas(model, pageLabel, add);
 
   const modelRoot = firstNamed(model, 'root');
   if (!modelRoot) {
@@ -614,15 +618,20 @@ function checkPage(diagram, pageLabel, add, catalog) {
   checkLayout(cells, { pageLabel, byId, hasChildren, add, line: model.line });
 }
 
-function checkBackground(model, pageLabel, add) {
+function checkCanvas(model, pageLabel, add) {
   const background = model.attrs.background;
   if (background === undefined || background === '' || background === 'none') {
-    add(ERROR, CHECK.BACKGROUND, model.line, `<mxGraphModel> has no background attribute; the canvas exports transparent and a dark-mode viewer paints it dark, so dark labels vanish. Set background="${REQUIRED_BACKGROUND}"`, pageLabel);
-    return;
+    add(ERROR, CHECK.CANVAS, model.line, `<mxGraphModel> has no background attribute; the canvas exports transparent and a dark-mode viewer paints it dark, so dark labels vanish. Set background="${REQUIRED_BACKGROUND}"`, pageLabel);
+  } else {
+    const rgb = parseColor(background);
+    if (!rgb || rgb[0] !== 255 || rgb[1] !== 255 || rgb[2] !== 255) {
+      add(ERROR, CHECK.CANVAS, model.line, `background='${background}' is not white; the palette and the contrast check both assume ${REQUIRED_BACKGROUND}`, pageLabel);
+    }
   }
-  const rgb = parseColor(background);
-  if (!rgb || rgb[0] !== 255 || rgb[1] !== 255 || rgb[2] !== 255) {
-    add(ERROR, CHECK.BACKGROUND, model.line, `background='${background}' is not white; the palette and the contrast check both assume ${REQUIRED_BACKGROUND}`, pageLabel);
+
+  const grid = model.attrs.grid;
+  if (grid !== REQUIRED_GRID) {
+    add(ERROR, CHECK.CANVAS, model.line, `<mxGraphModel> has grid='${grid === undefined ? 'absent' : grid}'; the grid is editor chrome that exports into the PNG and adds visual noise to a diagram meant to be read. Set grid="${REQUIRED_GRID}"`, pageLabel);
   }
 }
 

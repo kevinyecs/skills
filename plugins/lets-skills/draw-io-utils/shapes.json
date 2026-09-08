@@ -13,7 +13,7 @@
   "clouds": {
     "aws": {
       "notes": "Stencil based and fully name addressable: 1038 stencils. resourceIcon is a JS shape that fills a square in fillColor and draws the stencil named by resIcon inside it tinted with strokeColor, so strokeColor is the glyph colour (#ffffff for the official look) and fillColor is the tile. If resIcon names a stencil that does not exist the draw is simply skipped: a blank coloured square, no warning, exit 0. Shape libraries do not need enabling in the UI, stencils lazy load on first reference.",
-      "styleTemplate": "sketch=0;outlineConnect=0;fontColor=#232F3E;fillColor=<FILL_COLOR>;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=<RES_ICON>;",
+      "styleTemplate": "sketch=0;outlineConnect=0;fontColor=#000000;fillColor=<FILL_COLOR>;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=<RES_ICON>;",
       "defaultSize": { "width": 78, "height": 78 },
       "categoryColors": {
         "compute_containers_media_blockchain_quantum": "#ED7100",
@@ -68,7 +68,7 @@
       },
       "groupStylePrefix": "points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;",
       "containers": {
-        "aws_cloud": { "label": "AWS Cloud", "suffix": "grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" },
+        "aws_cloud": { "label": "AWS Cloud", "note": "strokeColor and fontColor were AWS Squid Ink #232F3E. Black instead: this outermost container has no brand boundary colour of its own, unlike region, VPC or account, so it takes the default black border and label.", "suffix": "grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#000000;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#000000;dashed=0;" },
         "region": { "label": "Region", "suffix": "grIcon=mxgraph.aws4.group_region;strokeColor=#00A4A6;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=1;" },
         "vpc": { "label": "VPC", "note": "fontColor was AWS's official label grey #AAB7B8, which is 2.06:1 on white and fails the validator's 3:1 font-contrast minimum. Changed to AWS's own VPC purple #8C4FFF, already this container's strokeColor, at 4.49:1.", "suffix": "grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#8C4FFF;dashed=0;" },
         "private_subnet": { "label": "Private subnet", "suffix": "grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#00A4A6;fillColor=#E6F6F7;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=0;" },
@@ -165,11 +165,11 @@
     }
   },
   "genericShapes": {
-    "note": "Every one of these carried no fontColor, which the validator reports as a font-contrast error: the implicit default is not written to the file, so a dark-mode viewer inverts it to white and the label vanishes on the mandated white canvas. fontColor=#232F3E added throughout, 13.57:1 on white.",
-    "box": { "label": "Plain box, for functional flow pages", "style": "rounded=0;whiteSpace=wrap;html=1;fontColor=#232F3E;" },
-    "roundedBox": { "label": "Rounded box", "style": "rounded=1;whiteSpace=wrap;html=1;fontColor=#232F3E;" },
-    "edge": { "label": "Orthogonal edge, always carries a label", "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontColor=#232F3E;" },
-    "groupBox": { "label": "Container box for grouping on a functional page", "style": "rounded=0;whiteSpace=wrap;html=1;fontColor=#232F3E;container=1;collapsible=0;verticalAlign=top;" }
+    "note": "The default canvas is white with no grid, so these carry the default ink: fontColor=#000000 and strokeColor=#000000, 21:1 on white. Both are explicit because draw.io never writes its implicit defaults into the file, and a dark-mode viewer inverts what is absent to white, which the validator reports as a font-contrast error.",
+    "box": { "label": "Plain box, for functional flow pages", "style": "rounded=0;whiteSpace=wrap;html=1;fontColor=#000000;strokeColor=#000000;" },
+    "roundedBox": { "label": "Rounded box", "style": "rounded=1;whiteSpace=wrap;html=1;fontColor=#000000;strokeColor=#000000;" },
+    "edge": { "label": "Orthogonal edge, always carries a label", "note": "strokeColor added: the entry had none, so the line colour was whatever the editor defaulted to rather than the black the page asks for.", "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontColor=#000000;strokeColor=#000000;" },
+    "groupBox": { "label": "Container box for grouping on a functional page", "style": "rounded=0;whiteSpace=wrap;html=1;fontColor=#000000;strokeColor=#000000;container=1;collapsible=0;verticalAlign=top;" }
   },
   "knownShapeNames": [
     "mxgraph.aws4.resourceIcon",

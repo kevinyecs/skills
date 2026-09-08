@@ -73,7 +73,7 @@ const ROUND_BOX = 'rounded=1;whiteSpace=wrap;html=1;fontColor=#232F3E;';
 function page(body, { name = 'Page-1', id = 'p1' } = {}) {
   return `<mxfile host="app.diagrams.net">
   <diagram id="${id}" name="${name}">
-    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" page="1" pageWidth="850" pageHeight="1100" background="#ffffff">
+    <mxGraphModel dx="800" dy="600" grid="0" gridSize="10" page="1" pageWidth="850" pageHeight="1100" background="#ffffff">
       <root>
 ${body}
       </root>
@@ -94,7 +94,7 @@ function twoBoxes(edgeAttrs = 'source="a" target="b"', edgeBody = '<mxGeometry r
 // The known-good file: two pages, five levels of nesting, escaped ampersand.
 const GOOD = `<mxfile host="app.diagrams.net">
   <diagram id="infra" name="Infrastructure">
-    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" page="1" pageWidth="850" pageHeight="1100" background="#ffffff">
+    <mxGraphModel dx="800" dy="600" grid="0" gridSize="10" page="1" pageWidth="850" pageHeight="1100" background="#ffffff">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -117,7 +117,7 @@ const GOOD = `<mxfile host="app.diagrams.net">
     </mxGraphModel>
   </diagram>
   <diagram id="flow" name="Checkout flow">
-    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" page="1" pageWidth="850" pageHeight="1100" background="#ffffff">
+    <mxGraphModel dx="800" dy="600" grid="0" gridSize="10" page="1" pageWidth="850" pageHeight="1100" background="#ffffff">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -223,16 +223,20 @@ run('a catalogued azure image path does not warn', () => {
 });
 
 
-// ------------------------------------------------------ readability: background
+// ---------------------------------------------------------- readability: canvas
 
 catches('page with no background attribute', page(`${ROOT_CELLS}
         <mxCell id="a" value="A" style="${BOX}" vertex="1" parent="1"><mxGeometry x="0" y="0" width="10" height="10" as="geometry" /></mxCell>
         <mxCell id="b" value="B" style="${BOX}" vertex="1" parent="1"><mxGeometry x="400" y="0" width="10" height="10" as="geometry" /></mxCell>
-        <mxCell id="e" value="l" style="${EDGE}" edge="1" parent="1" source="a" target="b"><mxGeometry relative="1" as="geometry" /></mxCell>`).replace(' background="#ffffff"', ''), CHECK.BACKGROUND);
+        <mxCell id="e" value="l" style="${EDGE}" edge="1" parent="1" source="a" target="b"><mxGeometry relative="1" as="geometry" /></mxCell>`).replace(' background="#ffffff"', ''), CHECK.CANVAS);
 
-catches('non-white background', twoBoxes().replace('background="#ffffff"', 'background="#1a1a1a"'), CHECK.BACKGROUND);
-catches("background='none'", twoBoxes().replace('background="#ffffff"', 'background="none"'), CHECK.BACKGROUND);
-passes('white background passes', twoBoxes(), CHECK.BACKGROUND);
+catches('non-white background', twoBoxes().replace('background="#ffffff"', 'background="#1a1a1a"'), CHECK.CANVAS);
+catches("background='none'", twoBoxes().replace('background="#ffffff"', 'background="none"'), CHECK.CANVAS);
+passes('white background passes', twoBoxes(), CHECK.CANVAS);
+
+catches('grid left on', twoBoxes().replace('grid="0"', 'grid="1"'), CHECK.CANVAS);
+catches('no grid attribute', twoBoxes().replace(' grid="0"', ''), CHECK.CANVAS);
+passes('white background with grid off passes', twoBoxes(), CHECK.CANVAS);
 
 // ---------------------------------------------------- readability: font contrast
 

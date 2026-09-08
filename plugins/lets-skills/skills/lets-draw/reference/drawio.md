@@ -47,7 +47,7 @@ attribute for this, and `compressed="false"` is not read on load.
 ```xml
 <mxfile host="app.diagrams.net">
   <diagram id="infrastructure" name="Infrastructure">
-    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="850" pageHeight="1100" background="#ffffff">
+    <mxGraphModel dx="800" dy="600" grid="0" gridSize="10" page="1" pageScale="1" pageWidth="850" pageHeight="1100" background="#ffffff">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -55,7 +55,7 @@ attribute for this, and `compressed="false"` is not read on load.
 
 - Root `<mxfile host="app.diagrams.net">`. Every other `mxfile` attribute is stripped on save, omit them.
 - One `<diagram id="..." name="...">`, using the slug and name the orchestrator assigned. Both are required by the validator, and they are what makes the merge safe. A single `<diagram>` with no `name` is not treated as a tabbed page.
-- **`background="#ffffff"` is mandatory.** Without it the canvas exports transparent, a dark-mode viewer paints its own dark surface behind it, and every dark label vanishes. It is a `background` error.
+- **The canvas is plain white with no grid: `background="#ffffff"` and `grid="0"`, both mandatory.** Without the background the canvas exports transparent, a dark-mode viewer paints its own dark surface behind it, and every dark label vanishes. The grid is editor chrome that exports into the PNG and adds visual noise to a diagram meant to be read. Either one wrong is a `canvas` error.
 - Every other `mxGraphModel` attribute is a view-state hint with a default. `pageWidth` and `pageHeight` are print pagination only. A labelled five column path is roughly 1900 wide, so **content will overflow the page box, and that is harmless.** The canvas is unbounded, the editor shows the overflow, and PNG export crops to content. Do not shrink the diagram to fit 850. The column pitch in section 7 wins over the page box every time.
 - `<root>` starts with `<mxCell id="0" />` and `<mxCell id="1" parent="0" />`, always. Cell `0` is the model root, cell `1` is the default layer. Cell ids are scoped to the page, so a branch never coordinates ids with another branch and two pages may both have an `apigw`.
 
@@ -98,7 +98,9 @@ no spaces around `=`, and a literal `;` inside a value breaks the parse.
 
 ## 3. Labels and contrast
 
-- **Every cell that carries a label carries an explicit dark `fontColor`.** draw.io's implicit default is black and that is not good enough: the default is never written into the file, so a dark-mode viewer has nothing to read and inverts it to white, which on the mandated white background is white on white. An absent `fontColor` on a labelled cell is a `font-contrast` error. Use `fontColor=#232F3E`, AWS Squid Ink, 13.57:1 on white. `#000000` is also fine. Anything under 3:1 against the surface the label actually sits on is an error.
+- **Black is the default ink.** On the white no-grid canvas, text is `fontColor=#000000`, edges are `strokeColor=#000000`, and a plain box border is `strokeColor=#000000`. The catalog styles in `shapes.json` already carry it, so a diagram built from them comes out right. Carved out and left alone: cloud icon tile `fillColor`, the `resourceIcon` glyph `strokeColor=#ffffff`, and the brand boundary colours on region, VPC, subnet and account containers. Those are semantic, not decoration.
+- **Black is the documented default, contrast is the enforced floor.** The validator does not check for `#000000` and must not be made to: `font-contrast` already rejects text a reader cannot read, and pinning one hex would reject the boundary colours above, which are legitimately not black. Do not "fix" this by tightening the check.
+- **Every cell that carries a label carries an explicit `fontColor`.** draw.io's implicit default is black and that is not good enough: the default is never written into the file, so a dark-mode viewer has nothing to read and inverts it to white, which on the mandated white background is white on white. An absent `fontColor` on a labelled cell is a `font-contrast` error. Anything under 3:1 against the surface the label actually sits on is an error.
 - **Every cell that carries a label also carries `labelBackgroundColor=#FFFFFF`.** It paints an opaque white box behind the text, so an edge or a container border passing behind a label occludes cleanly instead of striking through it. One token, and it removes a whole class of defect that no check can see. It pairs with the mandated white background, which is why the value is fixed rather than chosen. Every labelled cell on every page of the machinel file carries it.
 - **Size boxes to their labels.** `200x80` with `whiteSpace=wrap;html=1` is the default that worked, and it holds roughly 24 characters per line over three lines. Past that, widen by 20px per extra character rather than letting the text clip: draw.io does not shrink or ellipsise, it draws the overflow outside the box. Service icons are the fixed `78x78` from `shapes.json` and carry their label underneath, so a long service label needs column pitch, not a bigger box.
 
@@ -140,7 +142,7 @@ at all.
 A real AWS icon cell, `apigw` from the machinel infrastructure page:
 
 ```xml
-<mxCell id="apigw" value="machinel-dev-api&lt;br&gt;HTTP API, $default stage&lt;br&gt;5 routes, no authorizer" style="sketch=0;outlineConnect=0;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;" vertex="1" parent="region">
+<mxCell id="apigw" value="machinel-dev-api&lt;br&gt;HTTP API, $default stage&lt;br&gt;5 routes, no authorizer" style="sketch=0;outlineConnect=0;fontColor=#000000;labelBackgroundColor=#FFFFFF;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;" vertex="1" parent="region">
   <mxGeometry x="300" y="280" width="78" height="78" as="geometry" />
 </mxCell>
 ```
@@ -175,7 +177,7 @@ Parent the members into a container instead, and the container's `value` is the 
 as `decl` does on the machinel functional page:
 
 ```xml
-<mxCell id="decl" value="Declarative: OpenTofu owns the lifecycle (create, diff, update, destroy)" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontColor=#232F3E;container=1;collapsible=0;verticalAlign=top;fillColor=none;strokeColor=#232F3E;" vertex="1" parent="1">
+<mxCell id="decl" value="Declarative: OpenTofu owns the lifecycle (create, diff, update, destroy)" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fontColor=#000000;container=1;collapsible=0;verticalAlign=top;fillColor=none;strokeColor=#000000;" vertex="1" parent="1">
   <mxGeometry x="40" y="40" width="640" height="880" as="geometry" />
 </mxCell>
 ```
@@ -215,7 +217,7 @@ Worked from `e5` on the machinel infrastructure page, `apigw` to `logs`, both in
 x=540..618 two rows apart:
 
 ```xml
-<mxCell id="e5" value="writes JSON access logs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=12;fontColor=#232F3E;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="apigw" target="logs">
+<mxCell id="e5" value="writes JSON access logs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=12;fontColor=#000000;strokeColor=#000000;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="apigw" target="logs">
   <mxGeometry relative="1" as="geometry">
     <Array as="points">
       <mxPoint x="459" y="439" />
@@ -381,7 +383,7 @@ Errors block. Warnings do not, and each one is a question to answer.
 | `edge-label` | error | An edge says nothing about what happens on it. A project rule, not a format rule, and still an error |
 | `orphan-vertex` | error | A vertex connected to nothing and containing nothing. Either it belongs in the diagram and needs an edge, or it does not belong |
 | `style-token` | warning | A style token with no `=`, silently ignored. Usually a typo that dropped a real property |
-| `background` | error | The `<mxGraphModel>` has no `background`, or it is not `#ffffff`. A transparent canvas is painted dark by a dark-mode viewer and every dark label disappears |
+| `canvas` | error | The `<mxGraphModel>` has no `background`, or it is not `#ffffff`, or `grid` is not `"0"`. A transparent canvas is painted dark by a dark-mode viewer and every dark label disappears, and the editor grid exports into the PNG as noise |
 | `font-contrast` | error | A labelled cell has no `fontColor`, or one under 3:1 against the surface it sits on. The surface is the cell's `fillColor` only when the label is drawn inside it: `verticalLabelPosition=bottom` or `top`, or `labelPosition=left` or `right`, puts the label on the canvas, so it is judged against white. That is exactly the AWS icon case, where the tile colour does not help the label under it |
 | `node-overlap` | error | Two sibling vertices whose rectangles intersect. Exact, no estimation, and only siblings are compared, so a child inside its container is never reported |
 | `label-collision` | error | An edge label printed over a vertex, or over another edge label. Containers, ports and `connectable="0"` cells are excluded |

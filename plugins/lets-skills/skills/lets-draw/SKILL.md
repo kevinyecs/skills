@@ -37,7 +37,7 @@ holding its own reasons for every coordinate could not. **A generator cannot rev
 eye is a separate agent with a separate context, in the loop rather than at the end.
 
 **The validator fails on readability, not only on structure.** `node-overlap`, `label-collision`, `font-contrast` and
-`background` are errors, so a branch that will not come clean is a page a reader cannot read. That is why the cap
+`canvas` are errors, so a branch that will not come clean is a page a reader cannot read. That is why the cap
 below means something real.
 
 ## The shape of a run
@@ -81,7 +81,8 @@ parallel branches editing the finished file would clobber each other.
 
 Each generator is handed **an instruction to read `reference/drawio.md` before writing anything**, the page's slug,
 name and purpose from step 1, the solution design or the relevant part plus a pointer to the whole, and its ledger if
-this is not round one. Nothing else. The slug is the `<diagram id>` and the page name is the `<diagram name>`, both
+this is not round one. Nothing else. Every page uses the default canvas, plain white with no grid and black text, edges and
+plain-box borders, which section 2 of the reference specifies and the catalog styles already carry. The slug is the `<diagram id>` and the page name is the `<diagram name>`, both
 assigned here, both unique by construction.
 
 ### 3. The branch loop
