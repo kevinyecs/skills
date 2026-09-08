@@ -10,13 +10,13 @@
   },
   "plugins": [
     {
-      "name": "lets-code",
+      "name": "kevinye-skills",
       "description": "Design a system, draw it, build it, with a Stop gate that keeps the plan honest and a validator that keeps the diagram honest",
       "version": "0.2.0",
       "author": {
         "name": "kevinyecs"
       },
-      "source": "./plugins/lets-code",
+      "source": "./plugins/kevinye-skills",
       "category": "productivity",
       "keywords": [
         "orchestration",

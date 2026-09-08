@@ -83,6 +83,8 @@ Written into the target repo by the skill. Dependency free.
 | 10 | Skill: mandate the palette and a layout loop that iterates until clean | 2 | reviewed |
 | 11 | Regenerate the machinel diagram, render, confirm readable | 2 | reviewed |
 | 12 | Fold the eight regeneration findings into lets-draw | 2 | reviewed |
+| 13 | Rewrite the lets-draw loop as per-page branches with their own reviewers | 3 | running |
+| 14 | `branch-state.js` deterministic driver, plus branch awareness in the Stop gate | 2 | pending |
 
 2 and 3 depend on 1. 4 is independent of the diagram work. 5 depends on 2 and 3.
 
@@ -125,3 +127,47 @@ The first diagram was structurally perfect and visually unusable. Both facts mat
 Node geometry is fully known in the XML, so overlap is computable rather than a matter of
 taste. It belongs in the validator with the structural checks. A prose rule saying "do not
 overlap" is what produced this file.
+
+
+## The lets-draw loop, rewritten
+
+One agent drawing five pages sequentially is wrong. Each page is independent work with its
+own failure modes, and the run just proved that a generator cannot see its own layout
+defects. So: one branch per page, each with a generator and its own reviewer, each
+terminating on its own.
+
+- **Branches are pages.** Fan out one per page from the solution design.
+- **Every branch owns its own file** under `docs/diagrams/parts/`. Pages share one mxfile,
+  so parallel branches writing the finished file would clobber each other. Merge at the end.
+- **The reviewer is fresh every round and never inherits the generator's context.** It looks
+  at the rendered PNG and judges what the checks cannot: wrong icon for the service, wrong
+  direction, a connection that does not match the design, text over text, bad positioning.
+- **Findings accumulate in a per-branch ledger** so a fix cannot silently regress an earlier
+  finding, and the generator sees the whole history on each pass.
+- **A branch stops when its own reviewer returns clean.** The run stops when every branch
+  has. A capped branch reports what is still wrong rather than shipping.
+- **Ponytail here is about reading, not about architecture.** The design phase already did
+  the technical simplification. In this skill it means fewer crossings, straighter routes,
+  and splitting a page that is doing two jobs. It never means deleting a fact to reduce
+  clutter.
+
+
+## Determinism without extra model cost
+
+A driver that spawns `claude -p` per round would make the whole loop deterministic and would
+cost a session per call. Not worth it. Split the loop instead:
+
+- **Deterministic, no model**: validate each part, render each part, merge, decide which
+  branch runs next, refuse to stop while a branch is open. A script does all of it.
+- **Model, in session**: generate a page, review a render. These are the work itself and
+  cost the same whoever schedules them.
+
+`branch-state.js` answers one question, the same way every time: what is the next action.
+The orchestrator obeys it and spawns the sub-agents. The Stop gate reads the same ledgers.
+
+Guaranteed: no branch skipped, none merged unreviewed, every round validated and rendered
+because the script does it rather than the model, findings survive a restart, and the
+session cannot end while a branch is open.
+
+Not guaranteed: the order branches run in, and whether they run in parallel. Making that
+deterministic is the part that needed a spawning driver.

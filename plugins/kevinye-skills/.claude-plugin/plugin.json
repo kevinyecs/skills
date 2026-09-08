@@ -1,5 +1,5 @@
 {
-  "name": "lets-code",
+  "name": "kevinye-skills",
   "description": "Design a system, draw it, build it. A design-and-build toolkit, not a single implementation skill: argue a solution design out by opposed sub-agents, draw it as a validated multi-page drawio diagram, then implement it through scoped sub-agents on four model tiers. Use when a system needs to go from requirements to running code.",
   "version": "0.2.0",
   "author": {
@@ -7,5 +7,15 @@
   },
   "repository": "https://github.com/kevinyecs/skills",
   "license": "MIT",
-  "keywords": ["orchestration", "sub-agents", "planning", "delegation", "hooks", "claude-code", "architecture", "diagrams", "drawio"]
+  "keywords": [
+    "orchestration",
+    "sub-agents",
+    "planning",
+    "delegation",
+    "hooks",
+    "claude-code",
+    "architecture",
+    "diagrams",
+    "drawio"
+  ]
 }
