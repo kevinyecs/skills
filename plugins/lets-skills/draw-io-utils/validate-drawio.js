@@ -43,6 +43,7 @@ const CHECK = {
   NODE_OVERLAP: 'node-overlap',
   LABEL_COLLISION: 'label-collision',
   EDGE_CROSSES_NODE: 'edge-crosses-node',
+  PAGE_SHAPE: 'page-shape',
 };
 
 const DRAWIO_EXT = '.drawio';
@@ -86,6 +87,33 @@ const LINE_HEIGHT_RATIO = 1.2;
 // diagram, which is worse than missing a marginal collision. 0.6 means only an
 // overlap well inside the estimate's error bars is reported.
 const LABEL_SHRINK = 0.6;
+
+// A page is read fitted to a screen, so its aspect ratio decides how much of the
+// available scale the drawing gets. A 16:9 screen is 1.78:1. A page wider than
+// that is width limited and gets only 1.78/ratio of the screen height, so its
+// text renders at that fraction of full size. 2.5:1 leaves 71% of it, which
+// still reads. The measured failures do not: 3.24:1 leaves 55% and 7.86:1 leaves
+// 23%, which is a 12px label drawn at under 3px. The two known-good pages this
+// came from sit at 1.54 and 1.59, so the gap between good and bad is wide and
+// 2.5 is a judgement call inside it, deliberately at the bad end so a page that
+// is merely oblong is not blocked.
+const MAX_PAGE_ASPECT = 2.5;
+
+// The ratio is measured long side over short side, so a very tall page is judged
+// by the same number. Tall is not the safer direction: a screen is landscape, so
+// a 1:2.5 page is height limited and loses at least as much scale as a 2.5:1 one.
+
+// Below this the check does not apply. A page whose long side is under 1200px
+// fits a normal viewport at full size, so nothing is shrunk and its shape costs
+// no readability whatever it is. Three plain boxes at the 400px column pitch are
+// 1000 wide, so a two or three node page is never judged on shape.
+const MIN_PAGE_LONG_SIDE = 1200;
+
+// Wrapping a chain of n boxes into rows of k is about 400k wide and 200n/k tall
+// at the reference pitch, so the ratio is 2k*k/n. Solving 2k*k/n <=
+// MAX_PAGE_ASPECT gives the widest row that still lands inside the limit. Quoted
+// in the finding so the fix is arithmetic rather than taste.
+const MIN_NODES_PER_ROW = 2;
 
 // Colours the checks understand. Anything else (named colours, gradients,
 // 'none', 'default') is treated as unknown rather than guessed at.
@@ -583,7 +611,7 @@ function checkPage(diagram, pageLabel, add, catalog) {
     checkCell(cell, { pageLabel, ids, byId, hasChildren, connected, add, catalog });
   }
 
-  checkLayout(cells, { pageLabel, byId, hasChildren, add });
+  checkLayout(cells, { pageLabel, byId, hasChildren, add, line: model.line });
 }
 
 function checkBackground(model, pageLabel, add) {
@@ -706,11 +734,12 @@ function checkOrphan(cell, ctx, at) {
  * every parent chain is walked once per page.
  */
 function checkLayout(cells, ctx) {
-  const { pageLabel, byId, hasChildren, add } = ctx;
+  const { pageLabel, byId, hasChildren, add, line } = ctx;
   const cache = new Map();
   const rectOf = cell => absoluteRect(cell, byId, cache);
 
   checkNodeOverlap(cells, rectOf, pageLabel, add);
+  checkPageShape(cells, rectOf, pageLabel, line, add);
 
   const solid = cells
     .filter(c => isSolidVertex(c, hasChildren))
@@ -746,6 +775,45 @@ function checkNodeOverlap(cells, rectOf, pageLabel, add) {
         pageLabel);
     }
   }
+}
+
+/**
+ * The shape of the whole page, from the same absolute rects the overlap check
+ * uses. A six box chain in one row at the 400px pitch is 2200x280: nothing
+ * overlaps, every other check passes, and fitted to a screen the labels are
+ * microscopic. Exact arithmetic, so it is an error like node-overlap, and the
+ * limit is loose enough that a legitimately oblong page still passes.
+ */
+function checkPageShape(cells, rectOf, pageLabel, line, add) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let nodes = 0;
+  for (const cell of cells) {
+    if (cell.attrs.vertex !== '1' || cell.attrs.edge === '1' || cell.attrs.connectable === '0') continue;
+    const r = rectOf(cell);
+    if (!r) continue;
+    nodes++;
+    minX = Math.min(minX, r.x);
+    minY = Math.min(minY, r.y);
+    maxX = Math.max(maxX, r.x + r.w);
+    maxY = Math.max(maxY, r.y + r.h);
+  }
+  if (nodes === 0) return;
+  const w = maxX - minX;
+  const h = maxY - minY;
+  if (!(w > 0) || !(h > 0)) return;
+  const long = Math.max(w, h);
+  if (long < MIN_PAGE_LONG_SIDE) return;
+  const ratio = long / Math.min(w, h);
+  if (ratio <= MAX_PAGE_ASPECT) return;
+
+  const perRow = Math.max(MIN_NODES_PER_ROW, Math.floor(Math.sqrt(nodes * MAX_PAGE_ASPECT / 2)));
+  const wide = w >= h;
+  add(ERROR, CHECK.PAGE_SHAPE, line,
+    `page content box is ${w}x${h}, aspect ${ratio.toFixed(2)}:1 (too ${wide ? 'wide' : 'tall'}), past the ${MAX_PAGE_ASPECT}:1 limit. Fitted to a screen the whole page shrinks by that factor and the labels stop being readable, even though nothing overlaps. Wrap the ${wide ? 'chain into rows' : 'stack into columns'} of about ${perRow} nodes, the flow continuing on the next ${wide ? 'row down' : 'column across'}. Do not reduce the grid pitch instead: the pitch is what keeps labels off nodes, so shrinking it brings back the collisions the other checks exist to prevent`,
+    pageLabel);
 }
 
 function describeRect(r) {

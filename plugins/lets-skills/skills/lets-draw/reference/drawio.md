@@ -314,6 +314,33 @@ guesswork, because the drawn path is the path you chose.
 - The pitch applies inside a container too, in container-relative coordinates.
 - An `edge-crosses-node` warning is a node in the wrong place far more often than it is a routing problem. Move the node to the next row before you reach for waypoints.
 
+**Keep the page between 1:2.5 and 2.5:1, and wrap a long chain into rows.** `page-shape` measures
+the content bounding box and fails a page outside that band, in either direction, once its long
+side passes 1200px. The reason is scale, not overlap: a page is read fitted to a screen, a 16:9
+screen is 1.78:1, and a page wider than that gets only 1.78/ratio of the screen height, so its
+labels render at that fraction of full size. Six boxes in one row at the 400px pitch is 2200x280,
+7.86:1, which leaves 23% and turns a 12px label into under 3px. Nothing overlaps, so every other
+check passes it.
+
+Wrap into rows of about `floor(sqrt(1.25 x n))` boxes for a chain of `n`, the flow continuing on
+the next row down and the last box of a row joining the first box of the next. That number comes
+straight from the pitch: `k` boxes to a row is about `400k` wide and `200n/k` tall, a ratio of
+`2k^2/n`, so `2k^2/n <= 2.5` is the widest row that stays inside the limit.
+
+| Chain length | Boxes per row | Rows | Content box | Ratio |
+|---|---|---|---|---|
+| up to 7 | 2 | 3-4 | `600x680` | 1.13 |
+| 8 to 12 | 3 | 3-4 | `1000x680` | 1.47 |
+| 13 to 19 | 4 | 4-5 | `1400x880` | 1.59 |
+
+A top to bottom page wraps the same way, into columns, at the same numbers transposed. Tall is
+not the safe direction: a landscape screen fits a 1:2.5 page no better than a 2.5:1 one.
+
+**Never fix a wide page by reducing the pitch.** The pitch is sized from the longest edge label,
+not from the box, and it is the only thing keeping labels off nodes. Squeezing 2200px of chain
+into 1200px of page brings back exactly the `label-collision` and `node-overlap` errors the pitch
+exists to prevent. Wrap, or split the page.
+
 Do not attempt a layout algorithm. If a page genuinely needs one, `drawio --layout` exists when
 the binary is installed.
 
@@ -358,6 +385,7 @@ Errors block. Warnings do not, and each one is a question to answer.
 | `font-contrast` | error | A labelled cell has no `fontColor`, or one under 3:1 against the surface it sits on. The surface is the cell's `fillColor` only when the label is drawn inside it: `verticalLabelPosition=bottom` or `top`, or `labelPosition=left` or `right`, puts the label on the canvas, so it is judged against white. That is exactly the AWS icon case, where the tile colour does not help the label under it |
 | `node-overlap` | error | Two sibling vertices whose rectangles intersect. Exact, no estimation, and only siblings are compared, so a child inside its container is never reported |
 | `label-collision` | error | An edge label printed over a vertex, or over another edge label. Containers, ports and `connectable="0"` cells are excluded |
+| `page-shape` | error | The page's content bounding box is more than 2.5x longer than it is wide, or the reverse, with a long side over 1200px. Exact arithmetic, and nothing has to overlap for it to fire: the whole page shrinks to fit a screen and every label shrinks with it. Wrap the chain into rows, never by cutting the pitch |
 | `edge-crosses-node` | warning | The straight line between an edge's terminals passes through an unrelated vertex. A warning because the drawn edge is routed, not straight |
 | `shape-name` | warning | A `shape`, `resIcon`, `grIcon` or `image=` value not in the verified catalog. **The catalog is a verified subset, not the whole registry.** aws4 alone ships 1038 stencils, so a miss is not proof the name is fake. Verify it, then keep it or fix it |
 

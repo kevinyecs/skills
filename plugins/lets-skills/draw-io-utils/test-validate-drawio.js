@@ -347,6 +347,39 @@ run('edge-crosses-node is a warning, never an error', () => {
 
 passes('an edge to its own target does not report crossing it', twoBoxes(), CHECK.EDGE_CROSSES_NODE);
 
+// -------------------------------------------------------- readability: page shape
+
+/** A chain of `n` 200x80 boxes laid out at the 400px column pitch, `perRow` to a row. */
+function chain(n, perRow) {
+  const cells = [];
+  for (let i = 0; i < n; i++) {
+    const x = 40 + (i % perRow) * 400;
+    const y = 40 + Math.floor(i / perRow) * 200;
+    cells.push(`        <mxCell id="n${i}" value="Step ${i}" style="${BOX}" vertex="1" parent="1"><mxGeometry x="${x}" y="${y}" width="200" height="80" as="geometry" /></mxCell>`);
+    if (i > 0) cells.push(`        <mxCell id="c${i}" value="then" style="${EDGE}" edge="1" parent="1" source="n${i - 1}" target="n${i}"><mxGeometry relative="1" as="geometry"><mxPoint x="0" y="-40" as="offset" /></mxGeometry></mxCell>`);
+  }
+  return page(`${ROOT_CELLS}\n${cells.join('\n')}`);
+}
+
+// The real defect: six boxes in one row is 2200x280, 7.86:1, and every other
+// check passes because nothing overlaps.
+catches('a six box chain in one row is an unreadable strip', chain(6, 6), CHECK.PAGE_SHAPE);
+
+// 1400x880, 1.59:1 — the shape the wrap rule produces, and one of the two
+// machinel pages that must not be flagged.
+passes('a 1.59:1 page passes', chain(19, 4), CHECK.PAGE_SHAPE);
+
+// The same nineteen boxes stacked in one column: 200x3800, 19:1 the other way.
+// One threshold, both directions, because a landscape screen fits a tall page
+// no better than a wide one.
+catches('a very tall page is caught by the same threshold', chain(19, 1), CHECK.PAGE_SHAPE);
+
+// 600x80. Wildly oblong, and irrelevant: it fits any viewport at full size, so
+// nothing shrinks and nothing becomes unreadable.
+passes('a two node page is too small for the check to apply', chain(2, 2), CHECK.PAGE_SHAPE);
+
+passes('the known good file has no page-shape finding', GOOD, CHECK.PAGE_SHAPE);
+
 run('warnings alone do not count as errors', () => {
   const findings = validate(twoBoxes().replace('calls over HTTPS', 'a > b'));
   assert.strictEqual(findings.filter(f => f.severity === ERROR).length, 0);
