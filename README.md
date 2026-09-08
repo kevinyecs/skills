@@ -2,7 +2,7 @@
 
 Agent skills for Claude Code.
 
-## impl
+## lets-code
 
 An orchestration skill. The session that invokes it stops implementing and becomes a
 planner: it splits the work, scopes each task, delegates to sub-agents on the cheapest
@@ -21,10 +21,10 @@ own instincts.
 
 ```sh
 git clone https://github.com/kevinyecs/skills.git
-cp -r skills/impl ~/.claude/skills/impl
+cp -r skills/lets-code ~/.claude/skills/lets-code
 ```
 
-Then invoke it with `/impl` in Claude Code, or let it trigger when a plan or spec is ready
+Then invoke it with `/lets-code` in Claude Code, or let it trigger when a plan or spec is ready
 to build.
 
 ### Status

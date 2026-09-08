@@ -1,9 +1,9 @@
 ---
-name: impl
+name: lets-code
 description: Implement work through scoped sub-agents on four model tiers. Use when a plan, spec, ticket or PRD is ready to be built. The main session stays the orchestrator and does not write the code itself.
 ---
 
-# impl
+# lets-code
 
 Experimental. The session that invokes this skill is the **orchestrator**. It plans,
 scopes, delegates, reviews and keeps state. It does not implement. Every implementation
