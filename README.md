@@ -110,6 +110,7 @@ these separately if you want the pipeline to work as written.
 ### Tests
 
 ```sh
+node plugins/lets-skills/test-plugin.js
 node plugins/lets-skills/hooks/test-plan-gate.js
 node plugins/lets-skills/draw-io-utils/test-validate-drawio.js
 ```
