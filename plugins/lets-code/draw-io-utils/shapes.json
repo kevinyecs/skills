@@ -70,7 +70,7 @@
       "containers": {
         "aws_cloud": { "label": "AWS Cloud", "suffix": "grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" },
         "region": { "label": "Region", "suffix": "grIcon=mxgraph.aws4.group_region;strokeColor=#00A4A6;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=1;" },
-        "vpc": { "label": "VPC", "suffix": "grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;" },
+        "vpc": { "label": "VPC", "note": "fontColor was AWS's official label grey #AAB7B8, which is 2.06:1 on white and fails the validator's 3:1 font-contrast minimum. Changed to AWS's own VPC purple #8C4FFF, already this container's strokeColor, at 4.49:1.", "suffix": "grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#8C4FFF;dashed=0;" },
         "private_subnet": { "label": "Private subnet", "suffix": "grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#00A4A6;fillColor=#E6F6F7;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=0;" },
         "public_subnet": { "label": "Public subnet", "suffix": "grIcon=mxgraph.aws4.group_security_group;grStroke=0;strokeColor=#7AA116;fillColor=#F2F6E8;verticalAlign=top;align=left;spacingLeft=30;fontColor=#248814;dashed=0;" },
         "account": { "label": "AWS Account", "suffix": "grIcon=mxgraph.aws4.group_account;strokeColor=#CD2264;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#CD2264;dashed=0;" },
@@ -95,7 +95,8 @@
     },
     "azure": {
       "notes": "CAVEAT: Azure is image references, not stencils. shape=mxgraph.azure2.* does not exist. Sidebar-Azure2.js has 70 occurrences of image=img/lib/azure2 and zero of shape=mxgraph.azure2. The path resolves relative to the draw.io webapp root and works in web, desktop and headless export with no local asset. A bad path renders as an empty box with a broken-image placeholder, exit 0. The same file name appears under several categories (App_Services.svg is in compute/, app_services/ and containers/); any renders, pick the semantically right one.",
-      "styleTemplate": "image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=<IMAGE_PATH>;",
+      "styleTemplate": "image;aspect=fixed;html=1;points=[];align=center;fontSize=12;fontColor=#000000;image=<IMAGE_PATH>;",
+      "styleTemplateNote": "fontColor=#000000 added: draw.io never writes its implicit label colour to the file, a dark-mode viewer inverts the absent value to white, and the validator errors on any labelled cell with no fontColor. 21:1 on white.",
       "defaultSize": { "width": 68, "height": 68 },
       "categories": ["ai_machine_learning", "analytics", "app_services", "azure_ecosystem", "azure_stack", "azure_vmware_solution", "blockchain", "compute", "containers", "cxp", "databases", "devops", "general", "hybrid_multicloud", "identity", "integration", "internet_of_things", "intune", "iot", "management_governance", "menu", "migrate", "mixed_reality", "monitor", "networking", "other", "power_platform", "preview", "security", "storage", "web"],
       "services": {
@@ -130,7 +131,8 @@
     "gcp": {
       "notes": "CAVEAT: GCP has no single good library. gcp3 is the current clean colour set but is INCOMPLETE at 45 names total, with no Pub/Sub, no load balancer, no Firestore and no Bigtable. The gaps are filled from the legacy 2018 mxgraph.gcp.* stencils, which render as a monochrome outline hexagon with a faint glyph and therefore look visibly different from gcp3 icons on the same page. That is by design, matching draw.io's own legacy palette. gcp2 and gcpicons embed each icon as an inline base64 data-URI SVG rather than a named shape and are unusable for generation, do not attempt them.",
       "styleTemplate": "sketch=0;html=1;verticalAlign=top;labelPosition=center;verticalLabelPosition=bottom;align=center;fontSize=11;fontStyle=0;fontColor=#000000;aspect=fixed;pointerEvents=1;shape=<SHAPE>;fillColor=#4285f4;",
-      "legacyStyleTemplate": "dashed=0;html=1;shape=<SHAPE>;",
+      "legacyStyleTemplate": "dashed=0;html=1;fontColor=#000000;shape=<SHAPE>;",
+      "legacyStyleTemplateNote": "fontColor=#000000 added for the same reason as the gcp3 template already carries one: an absent fontColor is an error, not a default.",
       "services": {
         "compute_engine": { "label": "Compute Engine", "library": "gcp3", "shape": "mxgraph.gcp3.computeengine" },
         "cloud_run": { "label": "Cloud Run", "library": "gcp3", "shape": "mxgraph.gcp3.cloudrun" },
@@ -163,9 +165,11 @@
     }
   },
   "genericShapes": {
-    "box": { "label": "Plain box, for functional flow pages", "style": "rounded=0;whiteSpace=wrap;html=1;" },
-    "roundedBox": { "label": "Rounded box", "style": "rounded=1;whiteSpace=wrap;html=1;" },
-    "edge": { "label": "Orthogonal edge, always carries a label", "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" }
+    "note": "Every one of these carried no fontColor, which the validator reports as a font-contrast error: the implicit default is not written to the file, so a dark-mode viewer inverts it to white and the label vanishes on the mandated white canvas. fontColor=#232F3E added throughout, 13.57:1 on white.",
+    "box": { "label": "Plain box, for functional flow pages", "style": "rounded=0;whiteSpace=wrap;html=1;fontColor=#232F3E;" },
+    "roundedBox": { "label": "Rounded box", "style": "rounded=1;whiteSpace=wrap;html=1;fontColor=#232F3E;" },
+    "edge": { "label": "Orthogonal edge, always carries a label", "style": "edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontColor=#232F3E;" },
+    "groupBox": { "label": "Container box for grouping on a functional page", "style": "rounded=0;whiteSpace=wrap;html=1;fontColor=#232F3E;container=1;collapsible=0;verticalAlign=top;" }
   },
   "knownShapeNames": [
     "mxgraph.aws4.resourceIcon",

@@ -38,6 +38,11 @@ const CHECK = {
   ORPHAN: 'orphan-vertex',
   STYLE_TOKEN: 'style-token',
   SHAPE_NAME: 'shape-name',
+  BACKGROUND: 'background',
+  FONT_CONTRAST: 'font-contrast',
+  NODE_OVERLAP: 'node-overlap',
+  LABEL_COLLISION: 'label-collision',
+  EDGE_CROSSES_NODE: 'edge-crosses-node',
 };
 
 const DRAWIO_EXT = '.drawio';
@@ -46,6 +51,47 @@ const SHAPES_FILE = path.join(__dirname, 'shapes.json');
 const VALID_ENTITY = /&(?:#[0-9]+|#x[0-9A-Fa-f]+|amp|lt|gt|quot|apos);/y;
 const NAME_START = /^[A-Za-z_][A-Za-z0-9_.:-]*/;
 const GEOMETRY_ATTRS = ['x', 'y', 'width', 'height'];
+
+// ------------------------------------------------- readability constants
+// Every threshold and margin the readability checks use is named here, with the
+// reason for the number. None of them are inlined at the call site.
+
+// draw.io renders a missing `background` as transparent, and a dark-mode viewer
+// paints its own dark surface behind it. White is the only value that renders
+// the same everywhere, and it is the surface the contrast check assumes.
+const REQUIRED_BACKGROUND = '#ffffff';
+
+// Minimum contrast of label text against the surface it sits on. 3:1 is the
+// WCAG 2.1 large-text / non-text minimum. It is the right cut here rather than
+// the 4.5:1 body-text figure because AWS's own official container palette sits
+// between 3.0 and 5.4 against white (#00A4A6 is 3.06, #147EBA is 4.45), and
+// rejecting the official palette wholesale would be noise. It still rejects
+// what this check exists for: #AAB7B8 is 2.07 and #ffffff is 1.0.
+const MIN_CONTRAST_RATIO = 3;
+
+// draw.io's label font size when the style omits fontSize.
+const DEFAULT_FONT_SIZE = 12;
+
+// Average glyph advance as a fraction of font size, for draw.io's default
+// Helvetica at mixed case. Real advances run about 0.45-0.6em for lowercase
+// prose; 0.5 is the middle of that band.
+const CHAR_WIDTH_RATIO = 0.5;
+
+// Line box height as a fraction of font size. draw.io's default line-height is 1.2.
+const LINE_HEIGHT_RATIO = 1.2;
+
+// Estimated label boxes are shrunk to this fraction of the estimate, about their
+// own centre, before intersecting anything. There are no font metrics here, so
+// the estimate is wrong in both directions; a false positive blocks a good
+// diagram, which is worse than missing a marginal collision. 0.6 means only an
+// overlap well inside the estimate's error bars is reported.
+const LABEL_SHRINK = 0.6;
+
+// Colours the checks understand. Anything else (named colours, gradients,
+// 'none', 'default') is treated as unknown rather than guessed at.
+const HEX_COLOR = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+const HTML_BREAK = /<br\s*\/?>/gi;
+const HTML_INLINE = /<\/?(?:b|i|u|em|strong|div|p|span|font)\b[^>]*>/gi;
 
 // ---------------------------------------------------------------- XML scanner
 
@@ -283,6 +329,208 @@ function collectCells(rootNode) {
   return cells;
 }
 
+// ------------------------------------------------- geometry and colour helpers
+// Shared by every readability check so the rectangle maths exists once.
+
+function num(value, fallback = null) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/** Geometry exactly as written on the cell, before any parent offset. */
+function localRect(cell) {
+  const geo = firstNamed(cell.node, 'mxGeometry');
+  if (!geo) return null;
+  if (geo.attrs.relative === '1') return null; // ports and edge labels: x/y are fractions, not pixels
+  const w = num(geo.attrs.width);
+  const h = num(geo.attrs.height);
+  if (w === null || h === null || w <= 0 || h <= 0) return null;
+  return { x: num(geo.attrs.x, 0), y: num(geo.attrs.y, 0), w, h };
+}
+
+/**
+ * Page coordinates of a vertex. draw.io child geometry is relative to the
+ * parent's origin, so every ancestor offset has to be accumulated before two
+ * cells from different containers can be compared at all.
+ * The cache doubles as a cycle guard: a self-parented or looped cell resolves
+ * to null instead of recursing forever.
+ */
+function absoluteRect(cell, byId, cache) {
+  const id = cell.attrs.id;
+  if (cache.has(id)) return cache.get(id);
+  cache.set(id, null);
+  const local = localRect(cell);
+  if (!local) return null;
+  let { x, y } = local;
+  const parent = byId.get(cell.attrs.parent);
+  if (parent && parent.attrs.vertex === '1') {
+    const outer = absoluteRect(parent, byId, cache);
+    if (outer) { x += outer.x; y += outer.y; }
+  }
+  const rect = { x, y, w: local.w, h: local.h };
+  cache.set(id, rect);
+  return rect;
+}
+
+/** Origin a cell's own coordinates are measured from. */
+function parentOrigin(cell, byId, cache) {
+  const parent = byId.get(cell.attrs.parent);
+  const rect = parent && parent.attrs.vertex === '1' ? absoluteRect(parent, byId, cache) : null;
+  return rect ? { x: rect.x, y: rect.y } : { x: 0, y: 0 };
+}
+
+function intersects(a, b) {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
+function centre(rect) {
+  return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
+}
+
+function boxAround(point, w, h) {
+  return { x: point.x - w / 2, y: point.y - h / 2, w, h };
+}
+
+function turn(o, a, b) {
+  return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+}
+
+/** Proper crossing only: two segments that merely touch end to end do not count. */
+function segmentsCross(a, b, c, d) {
+  const d1 = turn(a, b, c);
+  const d2 = turn(a, b, d);
+  const d3 = turn(c, d, a);
+  const d4 = turn(c, d, b);
+  return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+}
+
+function segmentHitsRect(p, q, r) {
+  const inside = pt => pt.x > r.x && pt.x < r.x + r.w && pt.y > r.y && pt.y < r.y + r.h;
+  if (inside(p) || inside(q)) return true;
+  const corners = [
+    { x: r.x, y: r.y },
+    { x: r.x + r.w, y: r.y },
+    { x: r.x + r.w, y: r.y + r.h },
+    { x: r.x, y: r.y + r.h },
+  ];
+  for (let i = 0; i < 4; i++) {
+    if (segmentsCross(p, q, corners[i], corners[(i + 1) % 4])) return true;
+  }
+  return false;
+}
+
+/** #rgb or #rrggbb to [r,g,b]. Anything else is unknown, not black. */
+function parseColor(value) {
+  if (typeof value !== 'string') return null;
+  const m = HEX_COLOR.exec(value.trim());
+  if (!m) return null;
+  const hex = m[1].length === 3 ? m[1].split('').map(c => c + c).join('') : m[1];
+  return [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
+}
+
+/** WCAG 2.1 relative luminance. */
+function relativeLuminance(rgb) {
+  const channel = v => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
+}
+
+function contrastRatio(a, b) {
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/**
+ * The surface a cell's label is actually drawn on. An AWS resourceIcon tile
+ * carries verticalLabelPosition=bottom, which puts the label on the canvas
+ * BELOW the coloured tile — so a coloured fill there is irrelevant and the
+ * label needs to read against white. Only a label drawn inside an opaque fill
+ * gets to be measured against that fill.
+ */
+function labelSurface(style) {
+  if (styleValue(style, 'verticalLabelPosition') === 'bottom') return REQUIRED_BACKGROUND;
+  if (styleValue(style, 'verticalLabelPosition') === 'top') return REQUIRED_BACKGROUND;
+  if (styleValue(style, 'labelPosition') === 'right' || styleValue(style, 'labelPosition') === 'left') return REQUIRED_BACKGROUND;
+  const fill = styleValue(style, 'fillColor');
+  return parseColor(fill) ? fill : REQUIRED_BACKGROUND;
+}
+
+/** Visible text of a label: <br> becomes a line break, inline tags disappear. */
+function labelLines(value) {
+  return String(value).replace(HTML_BREAK, '\n').replace(HTML_INLINE, '').split('\n');
+}
+
+/**
+ * Estimated text box, centred on `point`, already shrunk by LABEL_SHRINK.
+ * There are no font metrics available, so this is length x fontSize arithmetic
+ * and nothing more.
+ */
+function estimateLabelBox(value, style, point) {
+  const lines = labelLines(value);
+  const longest = lines.reduce((n, line) => Math.max(n, line.trim().length), 0);
+  if (longest === 0) return null;
+  const size = num(styleValue(style, 'fontSize'), DEFAULT_FONT_SIZE) || DEFAULT_FONT_SIZE;
+  return boxAround(
+    point,
+    longest * size * CHAR_WIDTH_RATIO * LABEL_SHRINK,
+    lines.length * size * LINE_HEIGHT_RATIO * LABEL_SHRINK,
+  );
+}
+
+/** Both ends of an edge in page coordinates, from terminals or terminal points. */
+function edgeEnds(edge, byId, cache) {
+  const geo = firstNamed(edge.node, 'mxGeometry');
+  const origin = parentOrigin(edge, byId, cache);
+  const end = which => {
+    const terminal = byId.get(edge.attrs[which]);
+    const rect = terminal ? absoluteRect(terminal, byId, cache) : null;
+    if (rect) return centre(rect);
+    const point = geo ? childrenNamed(geo, 'mxPoint').find(p => p.attrs.as === `${which}Point`) : null;
+    if (!point) return null;
+    return { x: origin.x + num(point.attrs.x, 0), y: origin.y + num(point.attrs.y, 0) };
+  };
+  const source = end('source');
+  const target = end('target');
+  return source && target ? { source, target } : null;
+}
+
+function offsetPoint(geo) {
+  const point = geo ? childrenNamed(geo, 'mxPoint').find(p => p.attrs.as === 'offset') : null;
+  return point ? { x: num(point.attrs.x, 0), y: num(point.attrs.y, 0) } : { x: 0, y: 0 };
+}
+
+/**
+ * Where a label sits on its edge. Default is the midpoint of the straight line
+ * between the terminals; `relative` x slides it along that line (-1..1, 0 is the
+ * centre), `relative` y and any <mxPoint as="offset"/> move it in pixels.
+ */
+function labelAnchor(ends, geo) {
+  const offset = offsetPoint(geo);
+  const along = geo && geo.attrs.relative === '1' ? num(geo.attrs.x, 0) : 0;
+  const t = Math.min(1, Math.max(0, (along + 1) / 2));
+  const orthogonal = geo && geo.attrs.relative === '1' ? num(geo.attrs.y, 0) : 0;
+  return {
+    x: ends.source.x + (ends.target.x - ends.source.x) * t + offset.x,
+    y: ends.source.y + (ends.target.y - ends.source.y) * t + offset.y + orthogonal,
+  };
+}
+
+/**
+ * A vertex a label or edge must not run over. Containers are excluded: a label
+ * inside a region or VPC box is expected, not a collision. So are edge labels
+ * and ports (connectable='0'), and any cell holding children.
+ */
+function isSolidVertex(cell, hasChildren) {
+  if (cell.attrs.vertex !== '1' || cell.attrs.edge === '1') return false;
+  if (cell.attrs.connectable === '0') return false;
+  if (styleValue(cell.attrs.style || '', 'container') === '1') return false;
+  return !hasChildren.has(cell.attrs.id);
+}
+
 function checkPage(diagram, pageLabel, add, catalog) {
   const model = firstNamed(diagram, 'mxGraphModel');
   if (!model) {
@@ -293,6 +541,8 @@ function checkPage(diagram, pageLabel, add, catalog) {
     }
     return;
   }
+  checkBackground(model, pageLabel, add);
+
   const modelRoot = firstNamed(model, 'root');
   if (!modelRoot) {
     add(ERROR, CHECK.PAGE_MODEL, model.line, '<mxGraphModel> has no <root>', pageLabel);
@@ -331,6 +581,20 @@ function checkPage(diagram, pageLabel, add, catalog) {
 
   for (const cell of cells) {
     checkCell(cell, { pageLabel, ids, byId, hasChildren, connected, add, catalog });
+  }
+
+  checkLayout(cells, { pageLabel, byId, hasChildren, add });
+}
+
+function checkBackground(model, pageLabel, add) {
+  const background = model.attrs.background;
+  if (background === undefined || background === '' || background === 'none') {
+    add(ERROR, CHECK.BACKGROUND, model.line, `<mxGraphModel> has no background attribute; the canvas exports transparent and a dark-mode viewer paints it dark, so dark labels vanish. Set background="${REQUIRED_BACKGROUND}"`, pageLabel);
+    return;
+  }
+  const rgb = parseColor(background);
+  if (!rgb || rgb[0] !== 255 || rgb[1] !== 255 || rgb[2] !== 255) {
+    add(ERROR, CHECK.BACKGROUND, model.line, `background='${background}' is not white; the palette and the contrast check both assume ${REQUIRED_BACKGROUND}`, pageLabel);
   }
 }
 
@@ -373,6 +637,32 @@ function checkCell(cell, ctx) {
   if (isVertex && !isEdge) checkOrphan(cell, { ids, byId, hasChildren, connected }, at);
 
   checkStyle(a.style || '', at, catalog);
+  if (isVertex || isEdge) checkFontContrast(a, isEdge, at);
+}
+
+/**
+ * Every cell that renders text needs an explicit fontColor dark enough to read.
+ * Explicit, because draw.io's default label colour is not written to the file
+ * and a dark-mode viewer flips it to white — on the mandated white canvas that
+ * is white on white. Dark enough, by luminance rather than a colour blacklist.
+ */
+function checkFontContrast(a, isEdge, at) {
+  if (!(a.value || '').trim()) return;
+  const style = a.style || '';
+  const declared = styleValue(style, 'fontColor');
+  if (!declared) {
+    at(ERROR, CHECK.FONT_CONTRAST, "renders a label with no fontColor in its style; draw.io's implicit default is inverted to white in a dark-mode viewer, so the label disappears on the white canvas. Set an explicit dark fontColor");
+    return;
+  }
+  const font = parseColor(declared);
+  if (!font) return; // a colour this checker cannot read is not a colour it will guess at
+  // An edge label is drawn on the canvas, never on a fill.
+  const surface = parseColor(isEdge ? REQUIRED_BACKGROUND : labelSurface(style));
+  if (!surface) return;
+  const ratio = contrastRatio(font, surface);
+  if (ratio < MIN_CONTRAST_RATIO) {
+    at(ERROR, CHECK.FONT_CONTRAST, `fontColor='${declared}' has ${ratio.toFixed(2)}:1 contrast against the surface it is drawn on, below the ${MIN_CONTRAST_RATIO}:1 minimum. Note that on a resourceIcon tile the label sits BELOW the tile, so the tile's fill does not help it`);
+  }
 }
 
 function checkEdge(cell, geo, ctx, at) {
@@ -409,6 +699,122 @@ function checkOrphan(cell, ctx, at) {
   const parent = ctx.byId.get(a.parent);
   if (parent && parent.attrs.edge === '1') return;        // edge label child
   at(ERROR, CHECK.ORPHAN, 'vertex is connected to nothing and contains nothing');
+}
+
+/**
+ * The three geometric readability checks. They share one absolute-rect cache so
+ * every parent chain is walked once per page.
+ */
+function checkLayout(cells, ctx) {
+  const { pageLabel, byId, hasChildren, add } = ctx;
+  const cache = new Map();
+  const rectOf = cell => absoluteRect(cell, byId, cache);
+
+  checkNodeOverlap(cells, rectOf, pageLabel, add);
+
+  const solid = cells
+    .filter(c => isSolidVertex(c, hasChildren))
+    .map(c => ({ cell: c, rect: rectOf(c) }))
+    .filter(entry => entry.rect);
+
+  const labels = collectEdgeLabels(cells, byId, cache);
+  checkLabelCollision(labels, solid, pageLabel, add);
+  checkEdgeCrossings(cells, solid, byId, cache, pageLabel, add);
+}
+
+/**
+ * Two vertices whose rectangles intersect. Exact, no estimation.
+ * Only siblings are compared, which is what makes the expected nestings safe:
+ * a child inside its container, and a cell against its own parent, are never a
+ * pair here. Coordinates are resolved to page space first because a sibling
+ * pair still has to be measured in a common frame.
+ */
+function checkNodeOverlap(cells, rectOf, pageLabel, add) {
+  const placed = cells
+    .filter(c => c.attrs.vertex === '1' && c.attrs.edge !== '1' && c.attrs.connectable !== '0')
+    .map(c => ({ cell: c, rect: rectOf(c) }))
+    .filter(entry => entry.rect);
+
+  for (let i = 0; i < placed.length; i++) {
+    for (let j = i + 1; j < placed.length; j++) {
+      const a = placed[i];
+      const b = placed[j];
+      if (a.cell.attrs.parent !== b.cell.attrs.parent) continue;
+      if (!intersects(a.rect, b.rect)) continue;
+      add(ERROR, CHECK.NODE_OVERLAP, b.cell.line,
+        `cell '${b.cell.attrs.id}' overlaps sibling '${a.cell.attrs.id}': ${describeRect(b.rect)} intersects ${describeRect(a.rect)}. Move one of them`,
+        pageLabel);
+    }
+  }
+}
+
+function describeRect(r) {
+  return `[${r.x},${r.y} ${r.w}x${r.h}]`;
+}
+
+/** Every edge label on the page, Form A and Form B alike, with its estimated box. */
+function collectEdgeLabels(cells, byId, cache) {
+  const labels = [];
+  for (const cell of cells) {
+    const a = cell.attrs;
+    if (a.edge === '1') {
+      const ends = edgeEnds(cell, byId, cache);
+      if (!ends || !(a.value || '').trim()) continue;
+      const box = estimateLabelBox(a.value, a.style || '', labelAnchor(ends, firstNamed(cell.node, 'mxGeometry')));
+      if (box) labels.push({ cell, box, edgeId: a.id });
+      continue;
+    }
+    if (a.vertex !== '1' || !(a.value || '').trim()) continue;
+    const parent = byId.get(a.parent);
+    if (!parent || parent.attrs.edge !== '1') continue;      // Form B label child
+    const ends = edgeEnds(parent, byId, cache);
+    if (!ends) continue;
+    const box = estimateLabelBox(a.value, a.style || '', labelAnchor(ends, firstNamed(cell.node, 'mxGeometry')));
+    if (box) labels.push({ cell, box, edgeId: parent.attrs.id });
+  }
+  return labels;
+}
+
+/** An edge label printed over a node, or over another edge label. */
+function checkLabelCollision(labels, solid, pageLabel, add) {
+  for (const label of labels) {
+    for (const node of solid) {
+      if (!intersects(label.box, node.rect)) continue;
+      add(ERROR, CHECK.LABEL_COLLISION, label.cell.line,
+        `label of edge '${label.edgeId}' is printed over vertex '${node.cell.attrs.id}'. Move it with <mxPoint as="offset"/> on the edge geometry, or shorten it`,
+        pageLabel);
+    }
+  }
+  for (let i = 0; i < labels.length; i++) {
+    for (let j = i + 1; j < labels.length; j++) {
+      if (!intersects(labels[i].box, labels[j].box)) continue;
+      add(ERROR, CHECK.LABEL_COLLISION, labels[j].cell.line,
+        `label of edge '${labels[j].edgeId}' is printed on top of the label of edge '${labels[i].edgeId}'. Offset one of them`,
+        pageLabel);
+    }
+  }
+}
+
+/**
+ * An edge whose straight source-to-target segment passes through an unrelated
+ * vertex. A warning, not an error: draw.io routes orthogonally and waypoints
+ * are not followed here, so the straight line is only an approximation of the
+ * drawn path.
+ */
+function checkEdgeCrossings(cells, solid, byId, cache, pageLabel, add) {
+  for (const cell of cells) {
+    if (cell.attrs.edge !== '1') continue;
+    const ends = edgeEnds(cell, byId, cache);
+    if (!ends) continue;
+    for (const node of solid) {
+      const id = node.cell.attrs.id;
+      if (id === cell.attrs.source || id === cell.attrs.target) continue;
+      if (!segmentHitsRect(ends.source, ends.target, node.rect)) continue;
+      add(WARN, CHECK.EDGE_CROSSES_NODE, cell.line,
+        `edge '${cell.attrs.id}' runs straight through vertex '${id}', which is neither its source nor its target. Add waypoints or move the node (estimated from the straight line, so a routed edge may be fine)`,
+        pageLabel);
+    }
+  }
 }
 
 function checkStyle(style, at, catalog) {

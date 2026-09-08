@@ -1,14 +1,14 @@
 ---
-name: draw-system-diagram
+name: lets-draw
 description: Draw a system as one multi page .drawio file at docs/diagrams/, generated, validated against a real structural validator and rendered until it is provably not corrupt and actually readable. Use when someone needs to see the architecture. It consumes docs/design/SOLUTION-DESIGN.md, or an ARCHITECTURE.md plus the infrastructure code, and draws what those decided. It does not decide anything itself.
 ---
 
-# draw-system-diagram
+# lets-draw
 
 Input: `docs/design/SOLUTION-DESIGN.md`. Output: `docs/diagrams/<name>.drawio`, one multi
 page file that is structurally valid and actually says something. That path, every time.
 
-`solution-design` decides. This skill draws. `lets-code` builds. If the design is present but
+`lets-design` decides. This skill draws. `lets-code` builds. If the design is present but
 ambiguous about what talks to what, **ask the user**.
 
 **No `SOLUTION-DESIGN.md`?** An `ARCHITECTURE.md` plus the ADRs is an acceptable input, and so
@@ -16,7 +16,7 @@ is any document that states what the components are and what talks to what. What
 source, **read the infrastructure code and check the prose against it**. Design documents go
 stale, Terraform does not, and the diagram is read as a statement of fact about what is
 deployed. Where the two disagree, the code wins and you say so. If there is no document at
-all and no infrastructure to read, stop and invoke `solution-design`. Do not resolve an architectural gap by drawing a plausible answer: a
+all and no infrastructure to read, stop and invoke `lets-design`. Do not resolve an architectural gap by drawing a plausible answer: a
 diagram is read as a statement of fact, and an invented component becomes real the moment
 someone implements it.
 
@@ -42,7 +42,10 @@ arranged around that.
 
 ## The loop
 
-Generate, validate, render and look, repair, repeat, bounded.
+Generate, validate, render and look, repair, repeat, bounded. **The validator now fails on
+readability, not only on structure**, so an unreadable diagram does not pass. Transparent
+canvas, invisible label text, overlapping nodes and a label printed across an icon are all
+errors, and they are repaired in the same loop as a dangling edge terminal.
 
 ### 1. Install the utils
 
@@ -80,11 +83,14 @@ Per file:
 
 - Root `<mxfile host="app.diagrams.net">`. Every other `mxfile` attribute is stripped on save, omit them.
 - One `<diagram id="..." name="...">` per page. Both attributes are required by the validator: an unnamed single diagram is not treated as a tabbed page, and page links resolve by id.
-- Each page carries `<mxGraphModel dx="800" dy="600" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="850" pageHeight="1100">`. A labelled five column path is roughly 1900 wide, so **content will overflow the page box, and that is harmless.** `pageWidth` and `pageHeight` are print pagination only. The canvas is unbounded, the editor shows the overflow, and PNG export crops to content, not to the page. Do not shrink the diagram to fit 850, and do not read "leave a gutter" below as a promise that everything fits inside one page rectangle.
+- Each page carries `<mxGraphModel dx="800" dy="600" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="850" pageHeight="1100" background="#ffffff">`. **`background="#ffffff"` is mandatory on every page.** Without it the canvas exports transparent, and a viewer in dark mode paints its own dark surface behind it, so every dark label vanishes. It is a `background` error. A labelled five column path is roughly 1900 wide, so **content will overflow the page box, and that is harmless.** `pageWidth` and `pageHeight` are print pagination only. The canvas is unbounded, the editor shows the overflow, and PNG export crops to content, not to the page. Do not shrink the diagram to fit 850. The column pitch below wins over the page box every time.
+- **Every cell that carries a label carries an explicit dark `fontColor` in its style.** The catalog styles already do. draw.io's implicit default is black, and that is not good enough: the default is never written into the file, so a dark-mode viewer has nothing to read and inverts it to white, which on the mandated white background is white on white. An absent `fontColor` on a labelled cell is a `font-contrast` error. The default to use is `fontColor=#232F3E`, AWS Squid Ink, 13.57:1 on white. `#000000` is also fine. Anything under 3:1 against the surface the label actually sits on is an error.
+- **Every cell that carries a label also carries `labelBackgroundColor=#FFFFFF`.** It paints an opaque white box behind the text, so an edge or a container border passing behind a label occludes cleanly instead of striking through it. One token, and it removes a whole class of defect that no check can see. It pairs with the mandated white background, which is why the value is fixed rather than chosen. Every labelled cell on every page of the machinel file carries it.
 - Each `<root>` starts with `<mxCell id="0" />` and `<mxCell id="1" parent="0" />`, always, on every page.
 - Cell ids are scoped per page. The same id may appear on two pages. Uniqueness is checked within a `<root>`.
 - Every vertex needs `<mxGeometry x y width height as="geometry"/>`. Every edge needs `<mxGeometry relative="1" as="geometry"/>`. It may be empty, and it is where a label offset goes when the edge needs one. See Edge label collisions below.
 - **Size boxes to their labels.** `200x80` with `whiteSpace=wrap;html=1` is the default that worked, and it holds roughly 24 characters per line over three lines. Past that, widen by 20px per extra character rather than letting the text clip: draw.io does not shrink or ellipsise, it draws the overflow outside the box. Service icons are the fixed `78x78` from `shapes.json` and carry their label underneath, so a long service label needs column pitch, not a bigger box.
+- **Pin every edge's ports with `exitX/exitY/exitDx/exitDy` and `entryX/entryY/entryDx/entryDy`.** Unpinned, draw.io picks a side per edge at render time, and several edges leaving one node share a stub and lie on top of each other. Pinned ports are also the precondition for working out where a label actually lands, below. `exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;` is the plain left-to-right case; fan-out uses fractional `Y` values on the same side, as `apigw` does at `0.3`, `0.5` and `0.7`.
 - Container children use coordinates **relative to the container origin**, not the page.
 - Edges that cross container boundaries get `parent="1"`.
 
@@ -101,6 +107,11 @@ node draw-io-utils/validate-drawio.js docs/diagrams/                      # walk
 `--json` is the only flag. Exit 0 means no errors, 1 means errors, 2 means bad usage.
 
 **Run this yourself after every generation pass. It is a step of the loop, not a reminder.**
+
+A clean run now means structure **and gross layout** are both fine. It used to mean "the file
+is not corrupt, go and look at the picture yourself". It now means "nothing is corrupt and
+nothing is provably on top of anything else, go and look at the picture for the judgement the
+checks cannot make". Those are different claims, and only the second one is true today.
 
 There is also a `PostToolUse` hook on `Write|Edit` that runs the same validator and blocks on
 errors. It is a backstop, and it is tool shaped: it fires on a tool-based write and on nothing
@@ -119,12 +130,14 @@ command -v drawio && drawio -x -f png -o /tmp/page1.png --page-index 1 --scale 2
   docs/diagrams/system.drawio
 ```
 
-`--page-index` is 1 based. On Linux this needs a display: `xvfb-run -a drawio ... --no-sandbox
+`-p` / `--page-index` is **1 based**. `-p 0` is a rejected argument: the CLI exits non-zero before it opens the file. That is not a broken page, and reading it as one sends the next hour into repairing a page that was fine. On Linux this needs a display: `xvfb-run -a drawio ... --no-sandbox
 --disable-gpu`. Note `-k, --check` is not a validator, it means "do not overwrite existing
 files".
 
-Look for overlapping edge labels, text spilling out of boxes, edges crossing under nodes, and
-an icon that is a plain coloured square. Then repair and render again.
+The gross collisions are the validator's job now. This step catches what the estimates miss:
+text spilling out of a box, an icon that is a plain coloured square, a label that clears its
+neighbour by two pixels, a routed edge that takes an ugly path, a page that is simply too
+busy. Then repair and render again.
 
 **No binary?** Say so rather than claiming the diagram is readable, and apply the tactics that
 fix a bad picture blind: shorten every edge label and move the detail into the node, widen the
@@ -133,7 +146,8 @@ They are cheap and they are what the render iterations end up asking for anyway.
 
 ### 5. Repair
 
-- **Every error gets fixed.** No exceptions, no "cosmetic in this case".
+- **Every error gets fixed.** No exceptions, no "cosmetic in this case". A `label-collision` or `node-overlap` error is not cosmetic, it is the diagram being unreadable.
+- **Repair the layout, not just the structure.** A collision is fixed by moving something: an `<mxPoint as="offset"/>` on the edge, a shorter label, a wider column pitch, a node moved to another row. It is never fixed by deleting the label, and an edge with no label is its own error anyway.
 - **Warnings are judged, not silenced.** An unverified shape name means go and verify the name, not delete the icon. Deleting the cell to quiet the check is the one response that is always wrong.
 - Fix the cause, not the symptom. A missing terminal id usually means the id scheme drifted between pages, and the other edges are wrong too.
 
@@ -147,6 +161,9 @@ checks are still failing, on which page and cell, and what you tried. Then:
 - Do not weaken, skip, or edit the validator. It is not yours to change.
 
 Five failed attempts means the problem is understanding, not typing. Ask.
+
+A layout that will not come clean in five passes is usually one page doing two jobs. Splitting
+it is a legitimate repair. Shrinking the labels until the check stops firing is not.
 
 ## What each check means
 
@@ -171,7 +188,22 @@ Errors block. Warnings do not, and each one is a question to answer.
 | `edge-label` | error | An edge says nothing about what happens on it. A project rule, not a format rule, and still an error |
 | `orphan-vertex` | error | A vertex connected to nothing and containing nothing. Either it belongs in the diagram and needs an edge, or it does not belong |
 | `style-token` | warning | A style token with no `=`, silently ignored. Usually a typo that dropped a real property |
+| `background` | error | The `<mxGraphModel>` has no `background`, or it is not `#ffffff`. A transparent canvas is painted dark by a dark-mode viewer and every dark label disappears |
+| `font-contrast` | error | A labelled cell has no `fontColor`, or one under 3:1 against the surface it sits on. The surface is the cell's `fillColor` only when the label is drawn inside it: `verticalLabelPosition=bottom` or `top`, or `labelPosition=left` or `right`, puts the label on the canvas, so it is judged against white. That is exactly the AWS icon case, where the tile colour does not help the label under it |
+| `node-overlap` | error | Two sibling vertices whose rectangles intersect. Exact, no estimation, and only siblings are compared, so a child inside its container is never reported |
+| `label-collision` | error | An edge label printed over a vertex, or over another edge label. Containers, ports and `connectable="0"` cells are excluded |
+| `edge-crosses-node` | warning | The straight line between an edge's terminals passes through an unrelated vertex. A warning because the drawn edge is routed, not straight |
 | `shape-name` | warning | A `shape`, `resIcon`, `grIcon` or `image=` value not in the verified catalog. **The catalog is a verified subset, not the whole registry.** aws4 alone ships 1038 stencils, so a miss is not proof the name is fake. Verify it, then keep it or fix it |
+
+**What the geometric checks estimate, and therefore miss.** `node-overlap` is exact. The other
+two are not, and the validator's author recorded why:
+
+- A label box is estimated from character count times font size, because there are no font metrics available. Wide caps and narrow lowercase both come out average.
+- The estimate is then deliberately shrunk to 0.6 of itself about its centre, so a near miss passes. A false positive blocking a good diagram was judged worse than a missed marginal collision.
+- An edge label is placed at the midpoint of the **straight** line between the terminals, and waypoints are ignored entirely. draw.io routes orthogonally, so the drawn label is somewhere else. See The two label anchors below, which is the single defect this misses most.
+
+So a clean run still leaves marginal collisions possible. **The render is what catches those**,
+which is why step 4 exists and is not optional when the binary is there.
 
 ## Pages
 
@@ -194,6 +226,8 @@ Nest account, then region, then VPC, then subnet, then availability zone. Take t
 style prefixes and per boundary suffixes from `draw-io-utils/shapes.json` under
 `clouds.<cloud>.groupStylePrefix` and `clouds.<cloud>.containers`.
 
+**On an icon page, never exit or enter a node's bottom.** A `resourceIcon` label hangs *below* the 78x78 tile, so the real footprint is roughly 78 wide by 120 tall and up to 200px wide across the text. An edge leaving or arriving at the bottom is drawn straight through the node's own label. `node-overlap` is blind to this because it compares the 78x78 rectangles and nothing else, so a page full of this defect validates clean. Use `exitY`/`entryY` of `0`, or a fractional value on the left or right side. Not one edge on the machinel infrastructure page uses `exitY=1` or `entryY=1`. Cap each icon label line at about 26 characters so the text stays inside the column pitch, and use `&lt;br&gt;` to break it rather than letting it run.
+
 Availability Zone and Security group are plain styled rectangles with no icon. draw.io's own
 palette omits `container=1` on those two, so add it yourself if you parent anything into them.
 
@@ -213,13 +247,15 @@ children is an `orphan-vertex` error, so you cannot label a group by putting a b
 Parent the members into a container instead, and the container's `value` is the group label:
 
 ```
-style="rounded=0;whiteSpace=wrap;html=1;container=1;collapsible=0;verticalAlign=top;"
+style="rounded=0;whiteSpace=wrap;html=1;fontColor=#232F3E;container=1;collapsible=0;verticalAlign=top;"
 ```
+
+That is `genericShapes.groupBox` in `shapes.json`.
 
 A container with children is not an orphan, so it needs no edge of its own. Children use
 coordinates relative to the container origin. Leave about 40px of top padding for the label.
 
-## Drawing rules
+## The two label anchors, and why a clean run can still look wrong
 
 **Every edge carries a label saying what happens on it.** The protocol, the payload, the
 trigger. `POST /orders over HTTPS`, `writes order record`, `emits OrderPlaced`, `polls every
@@ -231,25 +267,67 @@ orphaned from its edge, and the check is one assertion. Use a separate `edgeLabe
 only when one edge genuinely needs two labels, such as a protocol at one end and a port at the
 other.
 
-**Edge labels collide, and the fix is an offset.** Every rule here pushes toward long, specific
-edge labels, and three long labels on one horizontal band render as overlapping mush. Move a
-label off the edge's midpoint with an `offset` point inside the edge's `mxGeometry`, which is
-the one thing that otherwise-empty geometry is for:
+**draw.io puts an edge label at the arc-length midpoint of the routed polyline. The validator
+puts it at the midpoint of the straight line between the two terminal centres.** On a straight
+edge those are the same point. On any L or Z shaped edge they are different, routinely by
+hundreds of pixels. This is the whole reason a diagram passes every check and is still visibly
+broken in a dozen places.
+
+Worked from `e5` on the machinel infrastructure page, `apigw` to `logs`, both in column
+x=540..618 two rows apart:
+
+- Terminal centres are `(579,439)` and `(579,859)`, so the **straight** anchor is `(579,649)`.
+- The edge exits left, runs down the reserved corridor at x=459 and enters `logs` from the left. Legs are 81 + 420 + 81 = 582 long, so the **routed** anchor is 291 along, at `(459,649)`.
+
+120px apart, for one ordinary edge. An `<mxPoint as="offset"/>` cannot reconcile them: it
+shifts both anchors by the same vector.
+
+**The rule: both landing points have to be clear.** Compute the routed one by hand from the
+pinned ports and the waypoints, check nothing is there, and check the straight midpoint too
+because that is the one the validator will fire on. If they disagree and only one is clear,
+the fix is the routing or the layout, not the offset.
+
+### Moving the label
+
+Two tools, and they are not interchangeable.
+
+**`mxGeometry` `x`, with `relative="1"`, slides the label along the edge.** It runs -1 at the
+source to 1 at the target, 0 is the centre, and `validate-drawio.js` honours it: `labelAnchor()`
+reads `geo.attrs.x`, maps it to `t = (along + 1) / 2` and interpolates the straight line at `t`.
+So it moves both anchors together, in the same direction, and stays on the edge. Reach for it
+whenever the answer is "put this near the source end" rather than "nudge this up 50px".
+
+**`<mxPoint as="offset"/>` translates the label in pixels**, `x` right and negative `y` up,
+from wherever it would otherwise sit. It is the right tool for separating two labels that
+already land near each other. On a long span it moves the label off its own edge, so use it
+there only along a lane you know is empty. From `p1e7`, the return leg of the inference path,
+which runs 1500px down a reserved lane at y=480 and needs its label clear of the boxes above:
 
 ```xml
-<mxCell id="e3" value="POST /v1/training-jobs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="apigw" target="l_trn">
-  <mxGeometry relative="1" as="geometry">
-    <mxPoint x="0" y="-50" as="offset"/>
-  </mxGeometry>
-</mxCell>
+<mxGeometry relative="1" as="geometry">
+  <Array as="points">
+    <mxPoint x="1690" y="480" />
+    <mxPoint x="140" y="480" />
+  </Array>
+  <mxPoint x="200" y="0" as="offset" />
+</mxGeometry>
 ```
 
-`x` and `y` are pixels from where the label would otherwise sit, negative `y` is up. Tactics,
-in the order to reach for them:
+**Stagger parallel edges by 50px.** Edges fanning out of one node, or running in the same
+horizontal band, get `y` offsets 50px apart: `-100`, `-50`, `50`, `100`. 25px is the floor and
+only works for one-line labels at `fontSize=12`, whose line box is 14px but whose collision
+box is judged before the shrink. 50 is the number that stops the check firing. `-25` is enough
+for a lane of single-line labels that are already staggered by row, which is what the five
+edges of the inference path use.
 
-- **Stagger parallel edges.** Edges fanning out of one node get `y` offsets 25px apart, such as `-75`, `-50`, `-25`, `25`. Two labels 10px apart still overlap.
-- **Shorten the label, move the detail into the node.** `POST /v1/predict` on the edge, the payload shape in the target box, beats a forty character edge label every time.
-- **Increase the column pitch.** A label wider than the gap it sits in cannot be offset out of trouble. Widen the gap.
+## Drawing rules
+
+**Shorten the label and move the detail into the node.** From the real findings:
+
+| Before, and what it did | After |
+|---|---|
+| `serves the model named by the endpoint config` on `sm_ep -> sm_model`, printed over both icons | `serves this model` on the edge, and the endpoint config named in the `sm_ep` node label |
+| `job submits source/sourcedir.tar.gz, writes training/ output` on `l_trn -> s3_art`, printed over `s3_data` | `writes training/ output` on the edge, and `source/` listed in the bucket's node label |
 
 **Node labels name the thing.** Enough that a reader knows what it is, not so much that the
 canvas becomes prose.
@@ -289,13 +367,46 @@ Escape `&` first or you double escape everything after it. With `html=1` in the 
 is rendered as HTML, so `<br>` and `<b>` are legitimate content, and they still have to arrive
 in the XML as `&lt;br&gt;`.
 
-**Layout: keep it simple and enforceable.**
+**Layout: a grid pitch, because overlap is now an exact error.**
 
+`node-overlap` compares real rectangles, so eyeballing the coordinates does not survive it. Lay
+every page out on a pitch and the check cannot fire. The pitch that worked:
+
+| Element | Real footprint | Column pitch | Row pitch |
+|---|---|---|---|
+| Service icon | `78x78` tile, label below it: about `78x120`, up to 200 wide | `240` | `210` |
+| Plain box | `200x80` | `400` | `200` |
+
+**Size the gap from the longest edge label, not from the element.** The pitch is set by what
+has to fit between two columns, and by the skill's own 0.5 char-width ratio a 24 character
+label at `fontSize=12` is 144px wide. So a 220 icon pitch leaves 142px and that label touches
+both neighbours, and the validator lets it through only because it shrinks the estimate to 0.6
+before intersecting anything. The numbers above are the ones that actually came out readable:
+240 minus 78 leaves 162px between icon columns, and 400 minus 200 leaves 200px between plain
+boxes, which is what a 32 character label like `sagemaker-runtime:InvokeEndpoint` needs. The
+plain-box pitch had to go from 320 to 400 for exactly that reason. The row pitch is the icon's
+real 120px footprint plus a lane, not 78 plus a lane.
+
+**Reserve corridors and lanes, and route through them.** This is the technique that makes a
+dense page come out clean, not an afterthought. Name the vertical corridors that live in the
+gaps between node columns and the horizontal lanes that live between node rows, then give
+every non-trivial edge explicit `<Array as="points">` waypoints through them. On the machinel
+infrastructure page the icon columns sit at page x 300, 540, 780, 1020 and 1260, and every
+waypoint on the page falls in a gap between two of them: 420, 440 and 459 in the first gap,
+660 through 760 in the second, 939 in the third, 1150 and 1210 in the fourth. Corridors are
+20px apart so two edges sharing a gap never share a line. The lanes work the same way in y,
+using the band the icon labels do not occupy.
+
+Waypoints buy three things at once: the routing is deterministic, so the routed label anchor
+can be computed at all; edges stop overlapping each other; and `edge-crosses-node` stops being
+guesswork, because the drawn path is now the path you chose.
+
+- All coordinates on the 10px grid, and both pitches are multiples of it.
 - One direction per page. Left to right for a request path, top to bottom for a layered stack. Pick one and hold it for the whole page.
-- Snap coordinates to the 10px grid.
-- Leave a clear gutter between nodes, roughly one node width, so edges have room to route.
 - Order nodes along the flow so edges run forward. Most crossings are a node in the wrong column, not a routing problem.
+- Container children are positioned relative to the container origin, so the pitch applies inside the container, and the container needs about 40px of top padding for its own label.
 - `edgeStyle=orthogonalEdgeStyle` everywhere.
+- An `edge-crosses-node` warning is a node in the wrong place far more often than it is a routing problem. Move the node to the next row before you reach for waypoints.
 
 Do not attempt a layout algorithm. If a page genuinely needs one, `drawio --layout` exists when
 the binary is installed.
@@ -330,7 +441,7 @@ Expect noise from attribute ordering and added view state defaults, and read pas
 
 ## Handoff
 
-- `solution-design` decided it.
+- `lets-design` decided it.
 - This skill drew it.
 - `lets-code` builds it.
 

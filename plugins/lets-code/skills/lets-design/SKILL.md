@@ -1,9 +1,9 @@
 ---
-name: solution-design
+name: lets-design
 description: Design a distributed system for a real project on a chosen cloud, argued out by opposed sub-agents and written down as docs/design/SOLUTION-DESIGN.md. Use when a system needs an architecture before anyone writes code. It designs and justifies, it does not implement. lets-code builds what this produces.
 ---
 
-# solution-design
+# lets-design
 
 Senior architect and solution engineer. Cloud agnostic in method, fully committed once a
 cloud is chosen. The session that invokes this skill is the **orchestrator**: it gates the
@@ -231,7 +231,7 @@ keep a future migration open, unless a requirement demands portability.
 
 The design ends by handing off:
 
-- `draw-system-diagram` draws it.
+- `lets-draw` draws it.
 - `lets-code` builds it.
 
 This skill does neither. If the design is accepted and the next question is "how do we build

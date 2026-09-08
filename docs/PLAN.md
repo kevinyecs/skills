@@ -4,7 +4,7 @@ Extend the `lets-code` plugin from one skill to three. It stops being an impleme
 skill and becomes the toolkit: design a system, draw it, build it.
 
 ```
-grilling (mattpocock)  ->  solution-design  ->  draw-system-diagram  ->  lets-code
+grilling (mattpocock)  ->  lets-design  ->  lets-draw  ->  lets-code
    gather context          argue to a design     draw it, validated      build it
 ```
 
@@ -18,7 +18,7 @@ grilling (mattpocock)  ->  solution-design  ->  draw-system-diagram  ->  lets-co
 | Diagram format | uncompressed drawio XML, multi page | Diffable, and a script can check it |
 | Diagram enforcement | PostToolUse hook on `*.drawio` | Deterministic gate, not a reminder the agent can skip |
 
-## solution-design
+## lets-design
 
 Senior architect and solution engineer. Cloud agnostic in method, committed once a cloud is
 chosen. Ponytail voice throughout: the simplest architecture that meets the stated
@@ -44,7 +44,7 @@ what you must know about the service to run it (limits, quotas, failure behaviou
 model), what was rejected and why, the trade-off accepted and why it is optimal here, and
 how it fails.
 
-## draw-system-diagram
+## lets-draw
 
 Consumes the solution design. Produces one multi page `.drawio` file plus the utils that
 keep it valid.
@@ -74,11 +74,15 @@ Written into the target repo by the skill. Dependency free.
 | 1 | Research drawio XML format, cloud shape catalogs, validation tooling | 3 | reviewed |
 | 2 | `draw-io-utils`: validator, shapes catalog, self check | 2 | reviewed |
 | 3 | `drawio-gate.js` hook, PostToolUse on `*.drawio`, wired into hooks.json | 2 | reviewed |
-| 4 | `solution-design/SKILL.md` | 2 | reviewed |
-| 5 | `draw-system-diagram/SKILL.md` | 2 | reviewed |
+| 4 | `lets-design/SKILL.md` | 2 | reviewed |
+| 5 | `lets-draw/SKILL.md` | 2 | reviewed |
 | 6 | plugin.json, marketplace.json, README for three skills | 1 | reviewed |
 | 7 | End to end dry run on the machinel project, then review | 2 | reviewed |
 | 8 | Fix the nine defects the dry run found | 2 | reviewed |
+| 9 | Validator: readability checks, white background, dark text, overlap detection | 2 | reviewed |
+| 10 | Skill: mandate the palette and a layout loop that iterates until clean | 2 | reviewed |
+| 11 | Regenerate the machinel diagram, render, confirm readable | 2 | reviewed |
+| 12 | Fold the eight regeneration findings into lets-draw | 2 | reviewed |
 
 2 and 3 depend on 1. 4 is independent of the diagram work. 5 depends on 2 and 3.
 
@@ -106,3 +110,18 @@ the skill treats as optional. The file was structurally valid and unreadable. De
 
 No rendering to PNG or SVG. No cost calculator, the design cites pricing models rather than
 computing a bill. No Terraform generation, `lets-code` already covers building.
+
+
+## Readability defects, from looking at the render
+
+The first diagram was structurally perfect and visually unusable. Both facts matter.
+
+- No `background` attribute anywhere, so the canvas is transparent and reads as dark
+- Edge labels default to the edge midpoint, which on a long horizontal span lands on top of
+  whatever node is in the middle of the canvas
+- Seven observed collisions, including a label printed across the SageMaker endpoint icon
+  and two labels printed on top of each other
+
+Node geometry is fully known in the XML, so overlap is computable rather than a matter of
+taste. It belongs in the validator with the structural checks. A prose rule saying "do not
+overlap" is what produced this file.

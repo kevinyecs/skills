@@ -15,18 +15,18 @@ A design-and-build toolkit. It used to be one implementation skill. It is now th
 that pipe into each other, plus a validator and three hooks.
 
 ```
-grilling (mattpocock)  ->  solution-design  ->  draw-system-diagram  ->  lets-code
+grilling (mattpocock)  ->  lets-design  ->  lets-draw  ->  lets-code
    gather context          argue to a design     draw it, validated      build it
 ```
 
 - **grilling** interviews you until the requirements a design needs actually exist.
-- **solution-design** turns those requirements into an architecture, argued out by opposed
+- **lets-design** turns those requirements into an architecture, argued out by opposed
   sub-agents rather than accepted from a single pass.
-- **draw-system-diagram** turns the design into a multi-page drawio file, validated on
+- **lets-draw** turns the design into a multi-page drawio file, validated on
   every write.
 - **lets-code** turns the design and the diagram into code, split across scoped sub-agents.
 
-### solution-design
+### lets-design
 
 Senior architect and solution engineer. Cloud agnostic in method, committed once a cloud is
 chosen. Gates on context first: if the requirements are not on the table (workload shape,
@@ -38,7 +38,7 @@ resolves the conflicts. Writes `docs/design/SOLUTION-DESIGN.md`.
 Reach for it when a system needs an architecture before anyone writes code, and you want
 the trade-offs on paper, not just the component list.
 
-### draw-system-diagram
+### lets-draw
 
 Consumes the solution design and produces one multi-page `.drawio` file: an infrastructure
 page, a functional flow page, and a page per critical request path. Generates, validates,
@@ -63,7 +63,7 @@ error handling, validation at boundaries, and the project's own conventions ahea
 own instincts.
 
 Reach for it once there is a plan, spec, ticket or PRD ready to build, whether or not it
-came out of `solution-design`.
+came out of `lets-design`.
 
 ### Hooks
 
@@ -103,7 +103,7 @@ resolves cells.
 
 ### Other plugins worth having
 
-`solution-design` chains to `mattpocock-skills:grilling` for its context gate.
+`lets-design` chains to `mattpocock-skills:grilling` for its context gate.
 `lets-code` references the `show-me` and `ponytail` plugins in its review pass. Install
 these separately if you want the pipeline to work as written.
 
