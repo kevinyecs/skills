@@ -1,5 +1,5 @@
 {
-  "name": "kevinye-skills",
+  "name": "lets-skills",
   "description": "Design a system, draw it, build it. A design-and-build toolkit, not a single implementation skill: argue a solution design out by opposed sub-agents, draw it as a validated multi-page drawio diagram, then implement it through scoped sub-agents on four model tiers. Use when a system needs to go from requirements to running code.",
   "version": "0.2.0",
   "author": {

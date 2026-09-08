@@ -6,7 +6,7 @@ A Claude Code plugin marketplace.
 
 ```sh
 claude plugin marketplace add kevinyecs/skills
-claude plugin install kevinye-skills@kevinyecs
+claude plugin install lets-skills@kevinye-skills
 ```
 
 ## lets-code
@@ -110,8 +110,8 @@ these separately if you want the pipeline to work as written.
 ### Tests
 
 ```sh
-node plugins/kevinye-skills/hooks/test-plan-gate.js
-node plugins/kevinye-skills/draw-io-utils/test-validate-drawio.js
+node plugins/lets-skills/hooks/test-plan-gate.js
+node plugins/lets-skills/draw-io-utils/test-validate-drawio.js
 ```
 
 ### Status

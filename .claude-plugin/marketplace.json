@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "kevinyecs",
+  "name": "kevinye-skills",
   "owner": {
     "name": "kevinyecs"
   },
@@ -10,13 +10,13 @@
   },
   "plugins": [
     {
-      "name": "kevinye-skills",
+      "name": "lets-skills",
       "description": "Design a system, draw it, build it, with a Stop gate that keeps the plan honest and a validator that keeps the diagram honest",
       "version": "0.2.0",
       "author": {
         "name": "kevinyecs"
       },
-      "source": "./plugins/kevinye-skills",
+      "source": "./plugins/lets-skills",
       "category": "productivity",
       "keywords": [
         "orchestration",

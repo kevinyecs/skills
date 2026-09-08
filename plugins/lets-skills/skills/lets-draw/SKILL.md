@@ -64,10 +64,10 @@ It is empty in a sub-agent shell, and `cp -R "${CLAUDE_PLUGIN_ROOT}/draw-io-util
 ```sh
 src="${CLAUDE_PLUGIN_ROOT:-}/draw-io-utils"
 [ -d "$src" ] || src=$(find "$HOME/.claude/plugins/cache" -maxdepth 6 -type d \
-  -name draw-io-utils -path '*kevinye-skills*' 2>/dev/null | head -1)
+  -name draw-io-utils -path '*lets-skills*' 2>/dev/null | head -1)
 if [ ! -d "$src" ]; then
   echo "draw-io-utils not found. CLAUDE_PLUGIN_ROOT='${CLAUDE_PLUGIN_ROOT:-unset}', and \
-nothing matched under ~/.claude/plugins/cache. Stop and ask the user where the kevinye-skills \
+nothing matched under ~/.claude/plugins/cache. Stop and ask the user where the lets-skills \
 plugin lives." >&2
   exit 1
 fi
