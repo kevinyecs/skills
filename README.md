@@ -1,6 +1,16 @@
-# skills
+<p align="center">
+  <img src="assets/banner.png" alt="lets-skills" width="100%">
+</p>
 
-A Claude Code plugin marketplace.
+Three skills that hand work to each other. Design a system, draw it, build it.
+
+```
+grilling  ->  lets-design  ->  lets-draw  ->  lets-code
+gather        argue it out     draw it       build it
+```
+
+Each stage produces a file the next one reads. You can start at any stage that has its
+input, and stop at any stage whose output is all you wanted.
 
 ## Install
 
@@ -9,105 +19,87 @@ claude plugin marketplace add kevinyecs/skills
 claude plugin install lets-skills@kevinye-skills
 ```
 
+## lets-design
+
+Designs a distributed system for a real project on a chosen cloud, and writes down why.
+
+It refuses to design without requirements, and chains to `grilling` to get them. Then a
+proposer drafts an architecture and three advocates attack it in parallel: one for
+reliability, one for security, and one for simplicity and cost. A judge resolves the
+conflicts and names the trade-offs it accepted.
+
+The third advocate is the one that matters. Without a seat arguing for deletion, review
+only ever adds, and you end up with a design that satisfies every reviewer and no budget.
+
+Output is `docs/design/SOLUTION-DESIGN.md`. Per component: what it does here, why it beat
+the alternatives for this project, what you must know to operate it, and how it fails.
+
+## lets-draw
+
+Turns that design into a multi page `.drawio` file that is actually readable.
+
+One branch per page, running in parallel. Each branch has a generator and its own reviewer,
+and the reviewer is spawned fresh every round and never sees the generator's context. It
+reads the design as well as the render, so it can catch a connection that does not exist,
+not just an ugly one. A branch stops when its own reviewer passes. The run stops when all
+of them have.
+
+This shape exists because a generator cannot review its own layout. A real run produced a
+diagram that passed every structural check and was unreadable in a dozen places.
+
+Between the two sits `validate-drawio.js`, because almost every way of corrupting a
+`.drawio` file fails silently. A bad `parent` attribute deletes the rest of the page and
+still exports a PNG successfully. The validator checks structure, contrast, overlap, label
+collisions and page shape, and a `PostToolUse` hook runs it on every write.
+
 ## lets-code
 
-A design-and-build toolkit. It used to be one implementation skill. It is now three skills
-that pipe into each other, plus a validator and three hooks.
+Implements a plan through sub-agents on four model tiers, cheapest one that can do the job.
 
-```
-grilling (mattpocock)  ->  lets-design  ->  lets-draw  ->  lets-code
-   gather context          argue to a design     draw it, validated      build it
-```
+The session that invokes it stops writing code and becomes the orchestrator. It splits the
+work, scopes each task, delegates, reviews what comes back, and keeps the plan updated.
+Independent tasks run in parallel, dependent ones wait.
 
-- **grilling** interviews you until the requirements a design needs actually exist.
-- **lets-design** turns those requirements into an architecture, argued out by opposed
-  sub-agents rather than accepted from a single pass.
-- **lets-draw** turns the design into a multi-page drawio file, validated on
-  every write.
-- **lets-code** turns the design and the diagram into code, split across scoped sub-agents.
+Before delegating anything it establishes the project's conventions and hands them to every
+sub-agent, because three sub-agents left to infer structure produce three different
+structures.
 
-### lets-design
+## Hooks
 
-Senior architect and solution engineer. Cloud agnostic in method, committed once a cloud is
-chosen. Gates on context first: if the requirements are not on the table (workload shape,
-traffic, data volume, availability target, RTO/RPO, compliance, budget, team size, cloud),
-it invokes `grilling` before drafting anything. A proposer drafts a design, three advocates
-argue reliability, security, and simplicity and cost against it in parallel, and a judge
-resolves the conflicts. Writes `docs/design/SOLUTION-DESIGN.md`.
+| Event | Does |
+|---|---|
+| `Stop` | Reads the plan's status table and refuses to end the session while a task is pending, or landed but unreviewed |
+| `SubagentStart` | Injects the project conventions into every sub-agent, since session context never reaches them |
+| `PostToolUse` | Runs the drawio validator on any `.drawio` file just written |
 
-Reach for it when a system needs an architecture before anyone writes code, and you want
-the trade-offs on paper, not just the component list.
+## Limits, honestly
 
-### lets-draw
+A hook cannot spawn an agent or run a skill. The gate cannot review anything itself. All it
+does is refuse to let the orchestrator stop, so the orchestrator has to do the review pass
+and update the plan.
 
-Consumes the solution design and produces one multi-page `.drawio` file: an infrastructure
-page, a functional flow page, and a page per critical request path. Generates, validates,
-repairs, and repeats, bounded, driven by a real validator rather than the agent's own
-judgement of whether the diagram looks right.
+The gate is only as good as the plan file. If the orchestrator does not maintain the status
+column, the gate has nothing to check.
 
-Reach for it once a design exists and needs to be seen, not just read.
+The gate gives up after 3 consecutive blocks in a session and prints a warning to stderr, so
+a wrong status value cannot trap you in a loop.
 
-### lets-code
+Both hooks exit silently when the file they look for is absent, so they are a no-op in any
+project that is not using them.
 
-An orchestration skill. The session that invokes it stops implementing and becomes a
-planner: it splits the work, scopes each task, delegates to sub-agents on the cheapest
-model tier that can do the job, reviews what comes back, and keeps a running record of
-where the plan stands.
+The drawio validator checks structure, not whether the diagram matches the design. It will
+pass a well formed diagram that draws the wrong system.
 
-Four tiers, lowest sufficient one wins, escalation on evidence rather than nerves. Tier 4
-requires explicit approval in chat before it spawns.
+Round trip and PNG verification need the drawio binary, which the plugin does not assume is
+installed. The validator works on the XML alone.
 
-Independent tasks run in parallel, dependent ones serialise behind a confirmed result.
-Every sub-agent inherits the same rules: DRY, KISS, YAGNI, small focused files, explicit
-error handling, validation at boundaries, and the project's own conventions ahead of its
-own instincts.
+## Other plugins worth having
 
-Reach for it once there is a plan, spec, ticket or PRD ready to build, whether or not it
-came out of `lets-design`.
+`lets-design` chains to `mattpocock-skills:grilling` for its context gate. `lets-code`
+references the `show-me` and `ponytail` plugins in its review pass. Install these separately
+if you want the pipeline to work as written.
 
-### Hooks
-
-**`plan-gate.js`, on Stop.** Reads the status table in `docs/PLAN.md` or `PLAN.md` and
-blocks the session from stopping while any row is `pending`, `running` or `landed`. The
-block message names the outstanding rows. `reviewed`, `skipped`, `done` and `blocked`
-count as settled. See the plan status contract in the skill for the full vocabulary.
-
-**`inject-context.js`, on SubagentStart.** SessionStart context never reaches sub-agents,
-so the conventions the orchestrator wrote down have to be pushed into each one. If
-`docs/CONVENTIONS.md` or `CONVENTIONS.md` exists, its content is injected into every
-sub-agent, capped at 4000 characters.
-
-**`drawio-gate.js`, on PostToolUse for `Write` and `Edit`.** Runs the diagram validator
-against any `.drawio` file that was just written or edited and blocks on failure.
-
-Why a validator exists at all: almost every way of corrupting a `.drawio` file fails
-silently, and a bad `parent` attribute deletes the rest of the page while draw.io still
-exports a PNG successfully. See `research/drawio-reference.md` for how the format actually
-resolves cells.
-
-### Limits, honestly
-
-- A hook cannot spawn an agent or run a skill. The gate cannot review anything itself. All
-  it does is refuse to let the orchestrator stop, so the orchestrator has to do the review
-  pass and update the plan.
-- The gate is only as good as the plan file. If the orchestrator does not maintain the
-  status column, the gate has nothing to check.
-- The gate gives up after 3 consecutive blocks in a session and prints a warning to stderr,
-  so a wrong status value cannot trap you in a loop.
-- Both hooks exit silently when the file they look for is absent, so they are a no-op in
-  any project that is not using them.
-- The drawio validator checks structure, not whether the diagram matches the design. It
-  will pass a well-formed diagram that draws the wrong system.
-- Round-trip and PNG verification need the drawio binary, which the plugin does not assume
-  is installed. The validator works on the XML alone.
-
-### Other plugins worth having
-
-`lets-design` chains to `mattpocock-skills:grilling` for its context gate.
-`lets-code` references the `show-me` and `ponytail` plugins in its review pass. Install
-these separately if you want the pipeline to work as written.
-
-### Tests
+## Tests
 
 ```sh
 node plugins/lets-skills/test-plugin.js
@@ -115,6 +107,6 @@ node plugins/lets-skills/hooks/test-plan-gate.js
 node plugins/lets-skills/draw-io-utils/test-validate-drawio.js
 ```
 
-### Status
+## License
 
-Experimental.
+MIT. Use it, fork it, ship it, sell it. Pull requests welcome.
