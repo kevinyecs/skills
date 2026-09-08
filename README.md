@@ -26,6 +26,11 @@ lines, each earning its place. Deterministic checks wherever a judgement can be 
 arithmetic, because a check that fails is worth more than a rule that is ignored. Every
 skill here has a seat at the table whose only job is to argue for deletion.
 
+And they are built so you can keep up. An agent moves faster than you can hold in your
+head, so every tool here writes down what it decided and why, as it goes. The state of the
+work is something you check rather than something you remember. That is the difference
+between output you own and output you merely accepted.
+
 None of this starts from scratch. `lets-design` gets its requirements by chaining to Matt
 Pocock's `grilling`. `lets-code` shows what it built with humanlayer's `show-me` and puts
 every landed task through `ponytail-review`. Those skills already solved the parts they
@@ -34,7 +39,8 @@ to a skill added here: if something good already exists, pin to it and give it t
 
 Install them alongside this plugin, they are listed under [Dependency skills](#dependency-skills).
 
-Less is more, and precise beats plausible.
+Less is more, precise beats plausible, and you should still understand the system after
+the agent is done.
 
 ## Install
 
