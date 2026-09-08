@@ -135,15 +135,34 @@ before the work starts, and so anything picked up gets held to the same bar as t
 that exist: an artifact a human can read, and a check instead of a judgement wherever one
 will fit.
 
+They fall into three families rather than seven separate ideas, which is also the order
+worth building them in.
+
+**Context in.** Everything upstream of a decision. `lets-design` currently assumes the
+codebase and the outside context are already understood, and nothing here supplies them.
+
 | Skill | Does | Status |
 |---|---|---|
-| `lets-understand` | Read an unfamiliar codebase and leave a map behind, so the next session starts informed instead of re reading everything | not started |
-| `lets-gather` | Collect the context that lives outside the repo before work starts, tickets, threads, docs, and write it where the other skills can read it | not started |
-| `lets-review` | Review a change for what it does, not for how it reads. The seat arguing for deletion applies here too | not started |
-| `lets-secure` | Threat model and audit, with every finding tied to a concrete path rather than a feeling | not started |
-| `lets-git` | History, branches, commits and conflicts treated as a deliberate operation rather than a reflex | not started |
-| `lets-deploy` | Ship it, and leave behind a check that says whether it actually landed | not started |
-| `lets-message` | Write one targeted message for a coworker or a customer. Audience, intent, and what they do next, not a wall of text | not started |
+| `lets-understand` | Explain any concept, not only code. A codebase, a service, a design choice, a git diff, or something being learned from scratch | not started |
+| `lets-gather` | Pull together the context a project already has: SoW, scope, Slack, Jira, the codebase, and call transcripts where they exist and their use is approved | not started |
+| `lets-message` | Write one targeted message for a coworker or a customer. Audience, intent, and what they do next, not a wall of text. The outbound half of gathering, for context that only lives in someone's head | not started |
+
+**Independent review.** Both spawn reviewers that never saw the work being reviewed, because
+an author marking their own homework is the failure mode. Same machinery, different lens, so
+the second is cheap once the first exists.
+
+| Skill | Does | Status |
+|---|---|---|
+| `lets-review` | Review any change or implementation through fresh external sub agents, each independent of the one that wrote it | not started |
+| `lets-secure` | The same shape aimed only at security. Proposes changes and never implements them itself | not started |
+
+**Opinionated operations.** Both encode preferences rather than hardcode them. Sensible
+defaults shipped, every one of them overridable.
+
+| Skill | Does | Status |
+|---|---|---|
+| `lets-git` | Git actions with your conventions written down: how a commit message reads, how a PR is described, when a large change is split across several | not started |
+| `lets-deploy` | Ship it, on the same pattern. Clean defaults you can replace, and a check that says whether it actually landed | not started |
 
 Bring one. A skill belongs here if it makes an agent more precise, leaves an artifact a
 human can read, and replaces a judgement with a check where it can.
