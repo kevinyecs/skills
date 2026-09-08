@@ -1,0 +1,11 @@
+{
+  "name": "lets-code",
+  "description": "Implement work through scoped sub-agents on four model tiers. Use when a plan, spec, ticket or PRD is ready to be built. The main session stays the orchestrator and does not write the code itself.",
+  "version": "0.1.0",
+  "author": {
+    "name": "kevinyecs"
+  },
+  "repository": "https://github.com/kevinyecs/skills",
+  "license": "MIT",
+  "keywords": ["orchestration", "sub-agents", "planning", "delegation", "hooks", "claude-code"]
+}

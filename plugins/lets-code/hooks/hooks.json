@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/plan-gate.js\"",
+            "timeout": 5,
+            "statusMessage": "Checking plan status..."
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/inject-context.js\"",
+            "timeout": 5,
+            "statusMessage": "Injecting project conventions..."
+          }
+        ]
+      }
+    ]
+  }
+}

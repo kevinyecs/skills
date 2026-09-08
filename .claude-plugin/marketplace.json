@@ -1,0 +1,24 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "skills",
+  "owner": {
+    "name": "kevinyecs"
+  },
+  "metadata": {
+    "description": "Claude Code skills and plugins from kevinyecs",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "lets-code",
+      "description": "Implement work through scoped sub-agents on four model tiers, with a Stop gate that keeps the plan honest",
+      "version": "0.1.0",
+      "author": {
+        "name": "kevinyecs"
+      },
+      "source": "./plugins/lets-code",
+      "category": "productivity",
+      "keywords": ["orchestration", "sub-agents", "planning", "hooks", "claude-code"]
+    }
+  ]
+}

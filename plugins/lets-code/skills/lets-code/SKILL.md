@@ -39,6 +39,28 @@ Only spawn after the user says yes in chat.
    not stop at the last interesting task and offer the rest as an option. If something is
    genuinely blocked, complete everything else and say plainly what was left and why.
 
+## Plan status contract
+
+The plan lives in `docs/PLAN.md`, or `PLAN.md` if there is no docs folder. It carries a
+markdown table with a **Status** column, one row per task, and the orchestrator keeps it
+current. The status values are exactly these:
+
+| Status | Means |
+|---|---|
+| `pending` | Not started |
+| `running` | A sub-agent is working on it |
+| `landed` | The sub-agent returned, not yet reviewed |
+| `reviewed` | `ponytail-review` has run and its findings are applied or declined with a reason |
+| `skipped` | Deliberately not doing it, reason written in the plan |
+| `blocked` | Cannot proceed, blocker written in the plan |
+| `done` | Finished and reviewed, for tasks with no review to run |
+
+A task moves to `landed` the moment its sub-agent returns. It moves to `reviewed` only
+after `ponytail-review` has run on that task. `landed` is not done.
+
+The Stop hook enforces this. Any row left at `pending`, `running` or `landed` blocks the
+session from stopping and names the row. Update the plan as you go rather than at the end.
+
 ## Establish the conventions before delegating
 
 The orchestrator owns this step. Do it once, up front, and again whenever the work moves
