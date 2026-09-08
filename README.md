@@ -6,7 +6,7 @@ A Claude Code plugin marketplace.
 
 ```sh
 claude plugin marketplace add kevinyecs/skills
-claude plugin install lets-code@skills
+claude plugin install lets-code@kevinyecs-skills
 ```
 
 ## lets-code

@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "skills",
+  "name": "kevinyecs-skills",
   "owner": {
     "name": "kevinyecs"
   },
@@ -18,7 +18,13 @@
       },
       "source": "./plugins/lets-code",
       "category": "productivity",
-      "keywords": ["orchestration", "sub-agents", "planning", "hooks", "claude-code"]
+      "keywords": [
+        "orchestration",
+        "sub-agents",
+        "planning",
+        "hooks",
+        "claude-code"
+      ]
     }
   ]
 }
